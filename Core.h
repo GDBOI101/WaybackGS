@@ -18,7 +18,6 @@ APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 	Pawn->ShieldRegenDelayGameplayEffect = nullptr;
 	Pawn->ShieldRegenGameplayEffect = nullptr;
 	Pawn->HealthRegenGameplayEffect = nullptr;
-	Pawn->CharacterMovement->bReplicates = true;
 	Pawn->SetReplicates(true);
 	Pawn->SetReplicateMovement(true);
 	Pawn->OnRep_ReplicatedBasedMovement();
@@ -90,6 +89,7 @@ namespace Hooks {
 			WorldInventory->Inventory.ReplicatedEntries = TArray<struct FFortItemEntry>(1);
 			WorldInventory->Inventory.ItemInstances = TArray<class UFortWorldItem*>(1);
 			/*reinterpret_cast<Inventory::WorldInventoryOffsetFix*>*/(PlayerController)->WorldInventory = WorldInventory;
+			reinterpret_cast<Inventory::WorldInventoryOffsetFix*>(PlayerController)->WorldInventory = WorldInventory;
 			AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
 			reinterpret_cast<Inventory::QuickbarOffsetFix*>(PlayerController)->QuickBars = QuickBars;
 			(PlayerController)->QuickBars = QuickBars;
@@ -172,21 +172,29 @@ namespace Core {
 			Abilities::GiveBaseAbilities(Pawn);
 		}
 
-		/*if (FuncName == "ServerTryActivateAbility") {
+		if (FuncName == "ServerTryActivateAbility") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerTryActivateAbility_Params*)Params;
 			
 			FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
 			FPredictionKey PredictionKey = InParams->PredictionKey;
 
-			static auto InternalTryActivateAbility = reinterpret_cast<char(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+
+			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
+			Spec->InputPressed = true;
 
 			UGameplayAbility* InstancedAbility = nullptr;
 			FGameplayEventData* TriggerEventData = nullptr;
 
 			if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Base);
+				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
+				return;
 			}
+
+			ASC->bIsNetDirty = true;
+			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
+			return;
 		}
 		
 		if (FuncName == "ServerTryActivateAbilityWithEventData") {
@@ -196,28 +204,44 @@ namespace Core {
 			FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
 			FPredictionKey PredictionKey = InParams->PredictionKey;
 
-			static auto InternalTryActivateAbility = reinterpret_cast<char(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+
+			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
+			Spec->InputPressed = true;
 
 			UGameplayAbility* InstancedAbility = nullptr;
 			FGameplayEventData* TriggerEventData = nullptr;
 
 			if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, &InParams->TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Base);
+				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
+				return;
 			}
-		}*/
+
+			ASC->bIsNetDirty = true;
+			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
+			return;
+		}
 
 		if (FuncName == "ServerAbilityRPCBatch") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerAbilityRPCBatch_Params*)Params;
 
-			static auto InternalTryActivateAbility = reinterpret_cast<char(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility ** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility ** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+
+			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, InParams->BatchInfo.AbilitySpecHandle);
+			Spec->InputPressed = true;
 
 			UGameplayAbility* InstancedAbility = nullptr;
 			FGameplayEventData* TriggerEventData = nullptr;
 
 			if (!InternalTryActivateAbility(ASC, InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey.Base);
+				ASC->ClientActivateAbilityFailed(InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey.Current);
+				return;
 			}
+
+			ASC->bIsNetDirty = true;
+			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
+			return;
 		}
 
 		//if (FuncName == "HandleStartingNewPlayer") {

@@ -24,5 +24,5 @@ namespace Offsets {
 	int GetNetConnection = 0x8C; //VTable Index
 
 	int GiveAbility = 0x3EA92D0;
-	int InternalTryActivateAbility = 0x238DA20;
+	int InternalTryActivateAbility = 0x3EAA5B0;
 }

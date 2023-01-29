@@ -3690,6 +3690,14 @@ public:
 	int32_t CachedNumItems;
 	int32_t CachedNumItemsToConsiderForWriting;
 
+	void IncrementArrayReplicationKey()
+	{
+		ArrayReplicationKey++;
+
+		if (ArrayReplicationKey == -1)
+			ArrayReplicationKey++;
+	}
+
 	void MarkArrayDirty()
 	{
 		IncrementArrayReplicationKey();
@@ -3698,12 +3706,19 @@ public:
 		CachedNumItemsToConsiderForWriting = -1;
 	}
 
-	void IncrementArrayReplicationKey()
+	void MarkItemDirty(FFastArraySerializerItem& Item)
 	{
-		ArrayReplicationKey++;
+		if (Item.ReplicationID == -1)
+		{
+			Item.ReplicationID = ++IDCounter;
+			if (IDCounter == -1)
+			{
+				IDCounter++;
+			}
+		}
 
-		if (ArrayReplicationKey == -1)
-			ArrayReplicationKey++;
+		Item.ReplicationKey++;
+		MarkArrayDirty();
 	}
 };
 

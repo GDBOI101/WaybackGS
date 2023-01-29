@@ -54,7 +54,7 @@ namespace Inventory {
 		WorldInventory->SetOwner(PC);
 		PC->WorldInventory = WorldInventory;*/
 		auto WorldInventory = /*reinterpret_cast<WorldInventoryOffsetFix*>*/(PC)->WorldInventory;
-		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
+		auto Quickbars = /*reinterpret_cast<QuickbarOffsetFix*>*/(PC)->QuickBars;
 		UFortWeaponMeleeItemDefinition* PickaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 		UFortWorldItem* Pickaxe = (UFortWorldItem*)PickaxeDef->CreateTemporaryItemInstanceBP(1, 0);
 		Pickaxe->SetOwningControllerForTemporaryItem(PC);
