@@ -82,24 +82,36 @@ namespace Hooks {
 			PlayerState->bAlwaysRelevant = true;
 
 			PlayerState->OnRep_PlayerTeam();
-
 			auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
 			WorldInventory->InventoryType = EFortInventoryType::World;
 			WorldInventory->Inventory = FFortItemList();
 			WorldInventory->Inventory.ReplicatedEntries = TArray<struct FFortItemEntry>(1);
 			WorldInventory->Inventory.ItemInstances = TArray<class UFortWorldItem*>(1);
-			/*reinterpret_cast<Inventory::WorldInventoryOffsetFix*>*/(PlayerController)->WorldInventory = WorldInventory;
+			(PlayerController)->WorldInventory = WorldInventory;
 			reinterpret_cast<Inventory::WorldInventoryOffsetFix*>(PlayerController)->WorldInventory = WorldInventory;
 			AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
+			QuickBars->SetOwner(PlayerController);
+			(PlayerController)->WorldInventory->SetOwner(PlayerController);
 			reinterpret_cast<Inventory::QuickbarOffsetFix*>(PlayerController)->QuickBars = QuickBars;
 			(PlayerController)->QuickBars = QuickBars;
 			PlayerController->OnRep_QuickBar();
+			QuickBars->EnableSlot(EFortQuickBars::Primary, 0);
+			QuickBars->EnableSlot(EFortQuickBars::Primary, 1);
+			QuickBars->EnableSlot(EFortQuickBars::Primary, 2);
+			QuickBars->EnableSlot(EFortQuickBars::Primary, 3);
+			QuickBars->EnableSlot(EFortQuickBars::Primary, 4);
+			QuickBars->EnableSlot(EFortQuickBars::Secondary, 0);
+			QuickBars->EnableSlot(EFortQuickBars::Secondary, 1);
+			QuickBars->EnableSlot(EFortQuickBars::Secondary, 2);
+			QuickBars->EnableSlot(EFortQuickBars::Secondary, 3);
+			QuickBars->EnableSlot(EFortQuickBars::Secondary, 4);
 
 			Abilities::GiveBaseAbilities(Pawn);
 
+			PlayerController->OverriddenBackpackSize = 5;
+
 			Inventory::SetupInventory(PlayerController);
 
-			PlayerController->OverriddenBackpackSize = 5;
 			PlayerController->bHasInitializedWorldInventory = true;
 		//}
 		return PlayerController;
@@ -117,7 +129,6 @@ namespace Hooks {
 }
 
 namespace Core {
-
 	void StartServer() {
 		UNetDriver* NetDriver = reinterpret_cast<UNetDriver * (*)(UEngine * Engine, UWorld * InWorld, FName NetDriverDefinition)>(Base + Offsets::CreateNetDriver)(GEngine, GEngine->GameViewport->World, FName(282));
 		NetDriver->NetDriverName = FName(282);
@@ -192,9 +203,7 @@ namespace Core {
 				return;
 			}
 
-			ASC->bIsNetDirty = true;
-			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
-			return;
+			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 		
 		if (FuncName == "ServerTryActivateAbilityWithEventData") {
@@ -217,16 +226,14 @@ namespace Core {
 				return;
 			}
 
-			ASC->bIsNetDirty = true;
-			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
-			return;
+			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 
 		if (FuncName == "ServerAbilityRPCBatch") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerAbilityRPCBatch_Params*)Params;
 
-			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility ** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
 
 			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, InParams->BatchInfo.AbilitySpecHandle);
 			Spec->InputPressed = true;
@@ -234,14 +241,13 @@ namespace Core {
 			UGameplayAbility* InstancedAbility = nullptr;
 			FGameplayEventData* TriggerEventData = nullptr;
 
+			
 			if (!InternalTryActivateAbility(ASC, InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
 				ASC->ClientActivateAbilityFailed(InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey.Current);
 				return;
 			}
 
-			ASC->bIsNetDirty = true;
-			ASC->ActivatableAbilities.MarkItemDirty((FFastArraySerializerItem&)Spec);
-			return;
+			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec& Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 
 		//if (FuncName == "HandleStartingNewPlayer") {

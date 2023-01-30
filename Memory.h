@@ -25,4 +25,5 @@ namespace Offsets {
 
 	int GiveAbility = 0x3EA92D0;
 	int InternalTryActivateAbility = 0x3EAA5B0;
+	int MarkAbilitySpecDirty = 0x3EAD360;
 }
