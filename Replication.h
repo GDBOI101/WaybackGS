@@ -1,59 +1,7 @@
 #pragma once
 #include "Includes.h"
 
-__int64 Patch() {
-	return 1;
-}
-
 namespace Replication {
-	struct FNetworkObjectInfo
-	{
-		/** Pointer to the replicated actor. */
-		AActor* Actor;
-
-		/** List of connections that this actor is dormant on */
-		TSet<TWeakObjectPtr<UNetConnection>> DormantConnections;
-
-		/** A list of connections that this actor has recently been dormant on, but the actor doesn't have a channel open yet.
-		*  These need to be differentiated from actors that the client doesn't know about, but there's no explicit list for just those actors.
-		*  (this list will be very transient, with connections being moved off the DormantConnections list, onto this list, and then off once the actor has a channel again)
-		*/
-		TSet<TWeakObjectPtr<UNetConnection>> RecentlyDormantConnections;
-
-		/** Next time to consider replicating the actor. Based on FPlatformTime::Seconds(). */
-		double NextUpdateTime;
-
-		/** Last absolute time in seconds since actor actually sent something during replication */
-		double LastNetReplicateTime;
-
-		/** Optimal delta between replication updates based on how frequently actor properties are actually changing */
-		float OptimalNetUpdateDelta;
-
-		/** Last time this actor was updated for replication via NextUpdateTime
-		* @warning: internal net driver time, not related to WorldSettings.TimeSeconds */
-		float LastNetUpdateTime;
-
-		/** Is this object still pending a full net update due to clients that weren't able to replicate the actor at the time of LastNetUpdateTime */
-		bool bPendingNetUpdate;
-	};
-
-	class FNetworkObjectList
-	{
-	public:
-		using FNetworkObjectSet = TSet_<TSharedPtr<FNetworkObjectInfo>>;
-
-		FNetworkObjectSet AllNetworkObjects;
-		FNetworkObjectSet ActiveNetworkObjects;
-		FNetworkObjectSet ObjectsDormantOnAllConnections;
-
-		TMap<TWeakObjectPtr<UObject>, int32> NumDormantObjectsPerConnection;
-	};
-
-
-	FNetworkObjectList GetNetworkObjects(UNetDriver* Driver) {
-		return (*(*(TSharedPtr<FNetworkObjectList>*)(__int64(Driver) + Offsets::NetworkObjectList)));
-	}
-
 	UChannel* (__fastcall* FnCreateChannel)(UNetConnection* Connection, int Type, bool bOpenedLocally, int Idx);
 	void(__fastcall* FnSetChannelActor)(UActorChannel* Ch, AActor* Actor);
 	bool(__fastcall* FnReplicateActor)(UActorChannel* Ch);
@@ -154,7 +102,6 @@ namespace Replication {
 		std::vector<AActor*> Out = {};
 		TArray<AActor*> WorldActors = {};
 		GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, AActor::StaticClass(), &WorldActors);
-		//auto NetworkActors = GetNetworkObjects(NetDriver).ActiveNetworkObjects.GetElements();
 		LOG("Building Consider List with " + std::to_string(WorldActors.Num()) + " Actors!");
 		for (int i = 0; i < WorldActors.Num(); i++) {
 			auto Data = WorldActors[i];
@@ -181,17 +128,10 @@ namespace Replication {
 			if (Ch == nullptr) {
 				return FinalActors;
 			}
-			/*if (Actor->bOnlyRelevantToOwner && Ch->Connection != Connection) {
-				FnCloseChannel(Ch);
-				continue;
-			}*/
-			if (/*IsNetRelevantFor(Actor, Connection)*/true) {
+			{
 				FinalActors++;
 				ReplicateToClient(Actor, Connection);
 				if (Actor->bReplicateMovement) Actor->OnRep_AttachmentReplication();
-			}
-			else {
-				FnCloseChannel(Ch);
 			}
 		}
 		Actors.empty();

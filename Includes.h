@@ -67,6 +67,10 @@ AActor* SpawnActor2(UClass* T, FRotator Rot, FVector Loc) {
 	return (GGameplayStatics->FinishSpawningActor(BeginSpawn, Transform));
 }
 
+__int64 Patch() {
+	return 1;
+}
+
 //#define DEBUG //Uncomment to enable debug logs
 
 void LOG(std::string msg, bool bIsDebug = true) {

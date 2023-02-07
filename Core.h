@@ -108,7 +108,6 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 	if (!Pawn) {
 		return;
 	}
-	//PC->ClientForceProfileQuery();
 	auto McpLoadout = UObject::FindObjectFast<UFortMcpContext>("FortMcpContext_0");
 	auto Loadout = PC->CustomizationLoadout;
 	if (!Loadout.Character) {
@@ -205,19 +204,10 @@ namespace Hooks {
 	AFortPlayerControllerAthena* SpawnPlayActor_Hk(UWorld* World, UNetConnection* Connection, ENetRole NetRole, FURL InUrl, void* UniqueId, FString& Error, uint8_t InNetPlayerIndex) {
 		Replication::ServerReplicateActors_ProcessActors(Connection, Replication::ServerReplicateActors_BuildConsiderList(Connection->Driver));
 		AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)SpawnPlayActor(GEngine->GameViewport->World, Connection, NetRole, InUrl, UniqueId, Error, InNetPlayerIndex);
-		//MessageBoxA(0, PlayerController->GetName().c_str(), "SPA", MB_OK);
 		Connection->PlayerController = PlayerController;
 		PlayerController->NetConnection = Connection;
 		PlayerController->Player = Connection;
 		Connection->OwningActor = PlayerController;
-		//AFortPlayerControllerAthena* PlayerController = SpawnActor<AFortPlayerControllerAthena>();
-		/*PlayerController->NetPlayerIndex = InNetPlayerIndex;
-		PlayerController->RemoteRole = ENetRole::ROLE_Authority;
-		Connection->PlayerID = *UniqueId.Get();
-		PlayerController->SetReplicates(true);*/
-		//reinterpret_cast<void(*)(AGameModeBase*, APlayerController*)>(GEngine->GameViewport->World->AuthorityGameMode->Vft[0xE2])(GEngine->GameViewport->World->AuthorityGameMode, PlayerController);
-		//if (PlayerController != GEngine->GameInstance->LocalPlayers[0]->PlayerController) {
-		//PlayerController->bAlwaysRelevant = true;
 		Replication::ReplicateToClient(PlayerController, Connection);
 		Replication::ReplicateToClient(PlayerController->PlayerState, Connection);
 		Replication::ReplicateToClient(World->GameState, Connection);
@@ -304,8 +294,6 @@ namespace Hooks {
 		reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0, 0, 5000 }, PlayerController);
 		Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, Connection);
 		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
-		//reinterpret_cast<IA_BitFieldOffsetFix*>(PlayerController)->bInfiniteAmmo = true;
-		//}
 		return PlayerController;
 	}
 
@@ -338,8 +326,6 @@ namespace Core {
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
 		uintptr_t SpawnPlayActorAddr = (Base + Offsets::SpawnPlayActor);
 		CreateHook(SpawnPlayActorAddr, Hooks::SpawnPlayActor_Hk, (void**)&Hooks::SpawnPlayActor);
-		/*uintptr_t GetNetConnectionAddr = __int64(GEngine->GameInstance->LocalPlayers[0]->PlayerController->Vft[Offsets::GetNetConnection]);
-		CreateHook(GetNetConnectionAddr, Hooks::GetNetConnection_Hk, nullptr);*/
 		uintptr_t NCMAddr = (Base + Offsets::NCM);
 		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);
 	}
@@ -492,28 +478,14 @@ namespace Core {
 				}
 				if (Def && Def->IsA(UFortBuildingItemDefinition::StaticClass())) {
 					auto BuildPreviewMarker = reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker;
-					//PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
-					//auto CheatManager = (UFortCheatManager*)PlayerController->CheatManager;
-					/*CheatManager->BuildWith(TEXT("Wood"));
-					CheatManager->BuildWith(TEXT("Stone"));
-					CheatManager->BuildWith(TEXT("Wood"));*/
 					if (BuildPreviewMarker) {
-						//auto OldResourceType = BuildPreviewMarker->ResourceType;
-						//reinterpret_cast<Inventory::CurrentResourceTypeOffsetFix*>(PlayerController)->CurrentResourceType = EFortResourceType::Wood;
 						if (Def == Wall) {
-							//if (reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker) {
-							//	reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->K2_DestroyActor();
-							//}
 							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
 							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_Solid.PBWA_W1_Solid_C");
-							//static UStaticMesh* Mesh = UObject::FindObject<UStaticMesh>("StaticMesh PBW_W1_Solid.PBW_W1_Solid");
 							static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Wall EMP_Wall_Solid.EMP_Wall_Solid");
 							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							//auto BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0,0,5000 }, PlayerController);
 							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Wall::StaticClass(), BuildPreviewMarker);
 							if (BuildPreviewMarker) {
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetStaticMesh(Mesh);
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetMaterial(0, reinterpret_cast<Inventory::BuildPreviewMarkerMIDOffsetFix*>(PlayerController)->BuildPreviewMarkerMID);
 								BuildPreviewMarker->BuildingType = EFortBuildingType::Wall;
 								BuildPreviewMarker->EditModePatternData = Metadata;
 								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Wall::StaticClass();
@@ -523,80 +495,45 @@ namespace Core {
 						}
 
 						if (Def == Floor) {
-							//CheatManager->BuildWith(TEXT("Wood"));
-							/*if (reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker) {
-								reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->K2_DestroyActor();
-							}*/
 							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
 							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_Floor_C.PBWA_W1_Floor_C");
-							//static UStaticMesh* Mesh = UObject::FindObject<UStaticMesh>("StaticMesh PBW_W1_Floor.PBW_W1_Floor");
 							static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Floor EMP_Floor_Floor.EMP_Floor_Floor");
 							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							//auto BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0,0,5000 }, PlayerController);
 							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Floor::StaticClass(), BuildPreviewMarker);
 							if (BuildPreviewMarker) {
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetStaticMesh(Mesh);
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetMaterial(0, reinterpret_cast<Inventory::BuildPreviewMarkerMIDOffsetFix*>(PlayerController)->BuildPreviewMarkerMID);
 								BuildPreviewMarker->BuildingType = EFortBuildingType::Floor;
 								BuildPreviewMarker->EditModePatternData = Metadata;
 								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Floor::StaticClass();
-								//BuildPreviewMarker->OnBuildingActorInitialized(EFortBuildingInitializationReason::PlacementTool, EFortBuildingPersistentState::New);
-								//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = BuildPreviewMarker;
 								//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
 							}
 						}
 
 						if (Def == Stair) {
-							//CheatManager->BuildWith(TEXT("Wood"));
-							/*if (reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker) {
-								reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->K2_DestroyActor();
-							}*/
 							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
 							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_M1_StairW_C.PBWA_M1_StairW_C");
-							//static UStaticMesh* Mesh = UObject::FindObject<UStaticMesh>("StaticMesh PBW_W1_StairW.PBW_W1_StairW");
 							static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Stair EMP_Stair_StairW.EMP_Stair_StairW");
 							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							//auto BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0,0,5000 }, PlayerController);
 							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Stair::StaticClass(), BuildPreviewMarker);
 							if (BuildPreviewMarker) {
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetStaticMesh(Mesh);
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetMaterial(0, reinterpret_cast<Inventory::BuildPreviewMarkerMIDOffsetFix*>(PlayerController)->BuildPreviewMarkerMID);
 								BuildPreviewMarker->BuildingType = EFortBuildingType::Stairs;
 								BuildPreviewMarker->EditModePatternData = Metadata;
 								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Stair::StaticClass();
-								//BuildPreviewMarker->OnBuildingActorInitialized(EFortBuildingInitializationReason::PlacementTool, EFortBuildingPersistentState::New);
-								//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = BuildPreviewMarker;
 								//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
 							}
 						}
 
 						if (Def == Roof) {
-							//CheatManager->BuildWith(TEXT("Wood"));
-							/*if (reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker) {
-								reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->K2_DestroyActor();
-							}*/
 							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
 							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_RoofC_C.PBWA_W1_RoofC_C");
-							//static UStaticMesh* Mesh = UObject::FindObject<UStaticMesh>("StaticMesh PBW_W1_RoofC.PBW_W1_RoofC");
 							static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Roof EMP_Roof_RoofC.EMP_Roof_RoofC");
 							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							//auto BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0,0,5000 }, PlayerController);
-							//BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Roof::StaticClass(), BuildPreviewMarker);
 							if (BuildPreviewMarker) {
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetStaticMesh(Mesh);
-								//BuildPreviewMarker->GetBuildingMeshComponent()->SetMaterial(0, reinterpret_cast<Inventory::BuildPreviewMarkerMIDOffsetFix*>(PlayerController)->BuildPreviewMarkerMID);
 								BuildPreviewMarker->BuildingType = EFortBuildingType::Roof;
-								//BuildPreviewMarker->EditModePatternData = Metadata;
+								BuildPreviewMarker->EditModePatternData = Metadata;
 								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Roof::StaticClass();
-								//BuildPreviewMarker->OnBuildingActorInitialized(EFortBuildingInitializationReason::PlacementTool, EFortBuildingPersistentState::New);
 								//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = BuildPreviewMarker;
 							}
 						}
-						/*BuildPreviewMarker->ResourceType = reinterpret_cast<Inventory::CurrentResourceTypeOffsetFix*>(PlayerController)->CurrentResourceType;
-						BuildPreviewMarker->OnRep_ResourceType(OldResourceType);
-						BuildPreviewMarker->OnRep_MetaData();
-						BuildPreviewMarker->OnBuildingActorInitialized(EFortBuildingInitializationReason::PlacementTool, EFortBuildingPersistentState::New);*/
-						//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
 					}
 				}
 			}

@@ -4,7 +4,7 @@ namespace Inventory {
 	struct QuickbarOffsetFix
 	{
 		unsigned char UnknownData00[0x1A88];
-		class AFortQuickBars* QuickBars;
+		AFortQuickBars* QuickBars;
 	};
 	
 	struct WorldInventoryOffsetFix
@@ -37,6 +37,7 @@ namespace Inventory {
 		EFortResourceType CurrentResourceType;
 	};
 
+	//Crashes
 	int GetMaxAmmo(UFortWeaponItemDefinition* ItemDef) {
 		if (ItemDef) {
 			auto Stats = ItemDef->GetWeaponStatHandle();
@@ -136,17 +137,6 @@ namespace Inventory {
 					WorldInventory->Inventory.ReplicatedEntries.RemoveAt(i);
 					break;
 				}
-			}
-			//reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->ServerRemoveItemInternal(GUID, false, true);
-			//reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->EmptySlot(Slot.first, Slot.second);
-			//Free The Slot Data
-			if (Slot.first == EFortQuickBars::Primary) {
-				/*reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
-				reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.ResetNum(); */
-			}
-			else {
-				/*reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
-				reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.ResetNum();*/
 			}
 
 			Update(PC);
