@@ -15936,7 +15936,7 @@ struct AFortPlayerController_ServerEditBuildingActor_Params
 {
 public:
 	class ABuildingSMActor*                      BuildingActorToEdit;                               // 0x0(0x8)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	TSubclassOf<class ABuildingSMActor>          NewBuildingClass;                                  // 0x8(0x8)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	class UClass*								 NewBuildingClass;                                  // 0x8(0x8)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	int32                                        RotationIterations;                                // 0x10(0x4)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	bool                                         bMirrored;                                         // 0x14(0x1)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	uint8                                        Pad_51D[0x3];                                      // Fixing Size Of Struct [ Dumper-7 ]
@@ -15983,7 +15983,7 @@ struct AFortPlayerController_ServerCreateBuildingActor_Params
 {
 public:
 	struct FBuildingClassData                    BuildingClassData;                                 // 0x0(0x10)(Parm, NoDestructor, NativeAccessSpecifierPublic)
-	struct FVector_NetQuantize10                 BuildLoc;                                          // 0x10(0xC)(Parm, NoDestructor, NativeAccessSpecifierPublic)
+	struct FVector								 BuildLoc;                                          // 0x10(0xC)(Parm, NoDestructor, NativeAccessSpecifierPublic)
 	struct FRotator                              BuildRot;                                          // 0x1C(0xC)(Parm, IsPlainOldData, NoDestructor, NativeAccessSpecifierPublic)
 	bool                                         bMirrored;                                         // 0x28(0x1)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	uint8                                        Pad_51F[0x7];                                      // Fixing Size Of Struct [ Dumper-7 ]

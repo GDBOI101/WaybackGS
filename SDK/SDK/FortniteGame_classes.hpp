@@ -12834,7 +12834,7 @@ public:
 	uint8                                        Pad_548[0x3];                                      // Fixing Size After Last Property  [ Dumper-7 ]
 	enum class EFortCostInfoTypes                CurrentCostInfoType;                               // 0x1938(0x1)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	uint8                                        Pad_549[0x7];                                      // Fixing Size After Last Property  [ Dumper-7 ]
-	TSubclassOf<class ABuildingSMActor>          CurrentBuildableClass;                             // 0x1940(0x8)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierProtected)
+	class UClass*								 CurrentBuildableClass;                             // 0x1940(0x8)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	TSubclassOf<class ABuildingSMActor>          PreviousBuildableClass;                            // 0x1948(0x8)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	enum class EFortResourceLevel                CurrentResourceLevel;                              // 0x1950(0x1)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	enum class EFortResourceType                 CurrentResourceType;                               // 0x1951(0x1)(ZeroConstructor, Transient, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
@@ -12998,12 +12998,12 @@ public:
 	void ServerExecuteInventoryItem(const struct FGuid& ItemGuid);
 	void ServerEndEditingBuildingActor(class ABuildingSMActor* BuildingActorToStopEditing);
 	void ServerEmote(class FName& AssetName);
-	void ServerEditBuildingActor(class ABuildingSMActor* BuildingActorToEdit, TSubclassOf<class ABuildingSMActor> NewBuildingClass, int32 RotationIterations, bool bMirrored);
+	void ServerEditBuildingActor(class ABuildingSMActor* BuildingActorToEdit, class UClass* NewBuildingClass, int32 RotationIterations, bool bMirrored);
 	void ServerDropCarriedObject();
 	void ServerDisassembleInventoryItem(const struct FGuid& ItemGuid);
 	void ServerDeployDefender(class ABuildingTrapDefender* DefenderTrap, const class FString& SelectedItemInstanceId, class FName& DefenderSquadId, const struct FGuid& WeaponToGiveGuid, int32 AmmoQuantity);
 	void ServerCreateCombatManager();
-	void ServerCreateBuildingActor(const struct FBuildingClassData& BuildingClassData, const struct FVector_NetQuantize10& BuildLoc, const struct FRotator& BuildRot, bool bMirrored);
+	void ServerCreateBuildingActor(const struct FBuildingClassData& BuildingClassData, const struct FVector& BuildLoc, const struct FRotator& BuildRot, bool bMirrored);
 	void ServerCreateAIDirectorDataManager();
 	void ServerCraftSchematic(const class FString& ItemId, int32 PostCraftSlot, bool bIsQuickCrafted);
 	void ServerClientPawnLoaded(bool bIsPawnLoaded);

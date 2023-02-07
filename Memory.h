@@ -16,6 +16,9 @@ namespace Offsets {
 	int CreateNetDriver = 0x2503800;
 	int SpawnPlayActor = 0x228AEA0;
 	int NCM = 0x2559A80;
+	int NoMcp = 0x634810;
+	int GetNetMode = 0x2558380;
+	int HandleReloadCost = 0x971CF0;
 
 	int IsNetRelevantFor = 0x85; //VTable Index
 	int ReplicationFrame = 0x288; //int*

@@ -91,7 +91,7 @@ namespace Replication {
 	}
 
 	bool IsReplicableActor(AActor* Actor) {
-		if (Actor->NetDormancy == ENetDormancy::DORM_Initial && Actor->bNetStartup) return false;
+		if (Actor && Actor->NetDormancy == ENetDormancy::DORM_Initial && Actor->bNetStartup) return false;
 		if (Actor && Actor->Name.ComparisonIndex != 0 && Actor->bReplicates && Actor->RemoteRole != ENetRole::ROLE_None) return true;
 		else return false;
 	}
@@ -100,8 +100,12 @@ namespace Replication {
 		if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) {
 			return;
 		}
+		auto Ch = FindOrGetCh(Client, Actor);
+		if (!Ch) {
+			return;
+		}
 		FnCallPreReplication(Actor, Client->Driver);
-		FnReplicateActor(FindOrGetCh(Client, Actor));
+		FnReplicateActor(Ch);
 	}
 
 	void ReplicateActor(AActor* Actor, UNetDriver* NetDriver) {
@@ -162,6 +166,8 @@ namespace Replication {
 				}
 			}
 		}
+		WorldActors.Data = nullptr;
+		WorldActors.ResetNum();
 		LOG("Built Consider List with " + std::to_string(Out.size()) + " Actors!");
 		return Out;
 	}
@@ -170,7 +176,7 @@ namespace Replication {
 		int FinalActors = 0;
 		LOG("Processing " + std::to_string(Actors.size()) + " Actors for Connection " + GetConnectionName(Connection));
 		for (AActor* Actor : Actors) {
-			if (Actor == nullptr) continue;
+			if (Actor == nullptr || Connection == nullptr) continue;
 			UActorChannel* Ch = FindOrGetCh(Connection, Actor);
 			if (Ch == nullptr) {
 				return FinalActors;
@@ -181,13 +187,15 @@ namespace Replication {
 			}*/
 			if (/*IsNetRelevantFor(Actor, Connection)*/true) {
 				FinalActors++;
-				FnReplicateActor(Ch);
+				ReplicateToClient(Actor, Connection);
 				if (Actor->bReplicateMovement) Actor->OnRep_AttachmentReplication();
 			}
 			else {
 				FnCloseChannel(Ch);
 			}
 		}
+		Actors.empty();
+		Actors.clear();
 		return FinalActors;
 	}
 
@@ -201,9 +209,9 @@ namespace Replication {
 			if (Connection->ViewTarget) {
 				if (Connection->PlayerController) {
 					FnClientSendAdjustment(Connection->PlayerController);
+					int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
+					LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
 				}
-				int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
-				LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
 			}
 		}
 		ConsiderList.empty();
@@ -215,7 +223,7 @@ namespace Hooks {
 	void (*TickFlushO)(UNetDriver* NetDriver, float DeltaSeconds);
 	void TickFlush_Hk(UNetDriver* NetDriver, float DeltaSeconds) {
 		if (NetDriver->ClientConnections.Num() > 0 && NetDriver->ClientConnections[0]->InternalAck == false) {
-			Replication::ServerReplicateActors(NetDriver);
+			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Replication::ServerReplicateActors, NetDriver, 0, 0);
 		}
 		return TickFlushO(NetDriver, DeltaSeconds);
 	}

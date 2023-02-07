@@ -86,7 +86,7 @@ public:
 
 	static class UClass* FindClass(const std::string& ClassFullName)
 	{
-		return FindObject<class UClass>(ClassFullName, EClassCastFlags::UClass);
+		return FindObject<class UClass>(ClassFullName/*, EClassCastFlags::UClass*/);
 	}
 
 

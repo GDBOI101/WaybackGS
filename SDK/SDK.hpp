@@ -26,6 +26,8 @@ namespace Offsets
 	inline int32 GObjects          = 0x06828360;
 	inline int32 AppendString      = 0x01371FF0;
 	inline int32 ProcessEvent      = 0x01461500;
+	inline int32 CollectGarbage    = 0x06DE28A6;
+	inline int32 StaticLoadObject  = 0x014684D0;
 }
 
 #include "PropertyFixup.hpp"
@@ -53,7 +55,7 @@ public:
 	{
 		Data = (T*)realloc(Data, sizeof(T) * (NumElements + 1));
 		Data[NumElements++] = InputData;
-		MaxElements = NumElements;
+		MaxElements++;
 	}
 
 	inline void RemoveAt(const int Index)

@@ -19,14 +19,52 @@ using namespace SDK;
 UFortEngine* GEngine;
 UGameplayStatics* GGameplayStatics;
 
+FQuat Rot2Quat(FRotator Rotation) {
+	FQuat Quat;
+	auto DEG_TO_RAD = 3.14159 / 180;
+	auto DIVIDE_BY_2 = DEG_TO_RAD / 2;
+
+	auto SP = sin(Rotation.Pitch * DIVIDE_BY_2);
+	auto CP = cos(Rotation.Pitch * DIVIDE_BY_2);
+
+	auto SY = sin(Rotation.Yaw * DIVIDE_BY_2);
+	auto CY = cos(Rotation.Yaw * DIVIDE_BY_2);
+
+	auto SR = sin(Rotation.Roll * DIVIDE_BY_2);
+	auto CR = cos(Rotation.Roll * DIVIDE_BY_2);
+
+	Quat.X = CR * SP * SY - SR * CP * CY;
+	Quat.Y = -CR * SP * CY - SR * CP * SY;
+	Quat.Z = CR * CP * SY - SR * SP * CY;
+	Quat.W = CR * CP * CY + SR * SP * SY;
+
+	return Quat;
+}
+
+
 template <class T>
-T* SpawnActor(FVector Loc = {0,0,0}, AActor* Owner = nullptr) {
+T* SpawnActor(FVector Loc, AActor* Owner) {
 	FTransform Transform = {};
 	Transform.Rotation = { 0,0,0,1 };
 	Transform.Scale3D = { 1,1,1 };
 	Transform.Translation = Loc;
 	AActor* BeginSpawn = GGameplayStatics->BeginDeferredActorSpawnFromClass(GEngine->GameViewport->World, T::StaticClass(), Transform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn, Owner);
 	return reinterpret_cast<T*>(GGameplayStatics->FinishSpawningActor(BeginSpawn, Transform));
+}
+
+template <class T>
+T* LoadObject(UClass* Class, const wchar_t* Name) {
+	auto FnLoadObject = reinterpret_cast<T*(__fastcall*)(UClass*, UObject*, const wchar_t*, const wchar_t*, unsigned int, UPackageMap*, bool)>(Base + Offsets::StaticLoadObject);
+	return (T*)FnLoadObject(Class, nullptr, Name, 0, 0, 0, 0);
+}
+
+AActor* SpawnActor2(UClass* T, FRotator Rot, FVector Loc) {
+	FTransform Transform = {};
+	Transform.Rotation = Rot2Quat(Rot);
+	Transform.Scale3D = { 1,1,1 };
+	Transform.Translation = Loc;
+	AActor* BeginSpawn = GGameplayStatics->BeginDeferredActorSpawnFromClass(GEngine->GameViewport->World, T, Transform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn, nullptr);
+	return (GGameplayStatics->FinishSpawningActor(BeginSpawn, Transform));
 }
 
 //#define DEBUG //Uncomment to enable debug logs

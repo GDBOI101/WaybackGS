@@ -43709,7 +43709,7 @@ void AFortPlayerController::ServerEmote(class FName& AssetName)
 // int32                              RotationIterations                                               (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 // bool                               bMirrored                                                        (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 
-void AFortPlayerController::ServerEditBuildingActor(class ABuildingSMActor* BuildingActorToEdit, TSubclassOf<class ABuildingSMActor> NewBuildingClass, int32 RotationIterations, bool bMirrored)
+void AFortPlayerController::ServerEditBuildingActor(class ABuildingSMActor* BuildingActorToEdit, class UClass* NewBuildingClass, int32 RotationIterations, bool bMirrored)
 {
 	static auto Func = Class->GetFunction("FortPlayerController", "ServerEditBuildingActor");
 
@@ -43834,7 +43834,7 @@ void AFortPlayerController::ServerCreateCombatManager()
 // struct FRotator                    BuildRot                                                         (Parm, IsPlainOldData, NoDestructor, NativeAccessSpecifierPublic)
 // bool                               bMirrored                                                        (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 
-void AFortPlayerController::ServerCreateBuildingActor(const struct FBuildingClassData& BuildingClassData, const struct FVector_NetQuantize10& BuildLoc, const struct FRotator& BuildRot, bool bMirrored)
+void AFortPlayerController::ServerCreateBuildingActor(const struct FBuildingClassData& BuildingClassData, const struct FVector& BuildLoc, const struct FRotator& BuildRot, bool bMirrored)
 {
 	static auto Func = Class->GetFunction("FortPlayerController", "ServerCreateBuildingActor");
 
