@@ -8,7 +8,7 @@
 FVector GetSpawnLoc() {
 	TArray<AActor*> SpawnLocs = {};
 	GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, AFortPlayerStartWarmup::StaticClass(), &SpawnLocs);
-	return SpawnLocs[(rand() % SpawnLocs.Num() - 1)]->K2_GetActorLocation();
+	return SpawnLocs[(rand() % SpawnLocs.Num())]->K2_GetActorLocation();
 }
 
 APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
@@ -63,8 +63,10 @@ struct HasServerFinishedLoadingOffsetFix {
 };
 
 void FixPickups(AFortPlayerController* PC) {
-	PC->OverriddenBackpackSize = 5;
 	reinterpret_cast<OverridenBackpackSizeOffsetFix*>(PC)->OverriddenBackpackSize = 5;
+	if (PC->CheatManager) {
+		((UFortCheatManager*)PC->CheatManager)->BackpackSetSize(5);
+	}
 }
 
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
@@ -301,6 +303,7 @@ namespace Hooks {
 
 		Abilities::GiveBaseAbilities(Pawn);
 
+		FixPickups(PlayerController);
 		Inventory::SetupInventory(PlayerController);
 		Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
 		//ApplyCosmetics(PlayerController);
@@ -308,6 +311,7 @@ namespace Hooks {
 		PlayerController->ServerExecuteInventoryItem(reinterpret_cast<Inventory::QuickbarOffsetFix*>(PlayerController)->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 
 		FixPickups(PlayerController);
+		PlayerController->bHasInitializedWorldInventory = true;
 		Inventory::Update(PlayerController);
 
 		auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
@@ -321,10 +325,11 @@ namespace Hooks {
 		HealthSet->Shield.CurrentValue = 100;
 		HealthSet->OnRep_Shield();
 		HealthSet->OnRep_CurrentShield();
-		PlayerController->bHasInitializedWorldInventory = true;
+		
 		//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0, 0, 5000 }, PlayerController);
 		//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, Connection);
-		//PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
+		reinterpret_cast<IA_BitFieldOffsetFix*>(PlayerController)->bInfiniteAmmo = true;
+		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		return PlayerController;
 	}
 
@@ -340,6 +345,7 @@ namespace Hooks {
 }
 
 namespace Core {
+	static FVector SZLoc;
 	void StartServer() {
 		UNetDriver* NetDriver = reinterpret_cast<UNetDriver * (*)(UEngine * Engine, UWorld * InWorld, FName NetDriverDefinition)>(Base + Offsets::CreateNetDriver)(GEngine, GEngine->GameViewport->World, FName(282));
 		NetDriver->NetDriverName = FName(282);
@@ -382,6 +388,7 @@ namespace Core {
 			EAthenaGamePhase OldGP = GS->GamePhase;
 			GS->GamePhase = EAthenaGamePhase::Warmup;
 			GS->OnRep_GamePhase(OldGP);
+			GS->WarmupCountdownEndTime = 99990.0f;
 		}
 
 		//Battle Bus
@@ -391,6 +398,7 @@ namespace Core {
 			Pawn->SetOwner(PlayerController);
 			PlayerController->Possess(Pawn);
 			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
+			Pawn->SetHealth(100);
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
 			HealthSet->CurrentShield.BaseValue = 0;
@@ -495,85 +503,12 @@ namespace Core {
 				return ProcessEventO(Obj, Func, Params);
 			}
 
-			static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
+			/*static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
 			static UFortBuildingItemDefinition* Floor = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor");
 			static UFortBuildingItemDefinition* Stair = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W");
-			static UFortBuildingItemDefinition* Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");
+			static UFortBuildingItemDefinition* Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");*/
 
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-
-			if (false) {
-				auto Def = (UFortBuildingItemDefinition*)Weapon;
-				if (reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker) {
-					reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(true);
-				}
-				if (Def && Def->IsA(UFortBuildingItemDefinition::StaticClass())) {
-					auto BuildPreviewMarker = reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker;
-					static UBuildingEditModeMetadata* Metadata = Def->BuildingMetaData.Get();
-					if (BuildPreviewMarker) {
-						if (Def == Wall) {
-							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
-							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_Solid.PBWA_W1_Solid_C");
-							//static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Wall EMP_Wall_Solid.EMP_Wall_Solid");
-							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Wall::StaticClass(), BuildPreviewMarker);
-							if (BuildPreviewMarker->EditModeSupport) {
-								BuildPreviewMarker->EditModeSupport->PreviewMetadata = Metadata;
-								BuildPreviewMarker->BuildingType = EFortBuildingType::Wall;
-								BuildPreviewMarker->EditModePatternData = Metadata;
-								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Wall::StaticClass();
-								//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
-							}
-						}
-
-						if (Def == Floor) {
-							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
-							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_Floor_C.PBWA_W1_Floor_C");
-							//static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Floor EMP_Floor_Floor.EMP_Floor_Floor");
-							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Floor::StaticClass(), BuildPreviewMarker);
-							if (BuildPreviewMarker->EditModeSupport) {
-								BuildPreviewMarker->EditModeSupport->PreviewMetadata = Metadata;
-								BuildPreviewMarker->BuildingType = EFortBuildingType::Floor;
-								BuildPreviewMarker->EditModePatternData = Metadata;
-								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Floor::StaticClass();
-								//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
-							}
-						}
-
-						if (Def == Stair) {
-							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
-							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_M1_StairW_C.PBWA_M1_StairW_C");
-							//static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Stair EMP_Stair_StairW.EMP_Stair_StairW");
-							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Stair::StaticClass(), BuildPreviewMarker);
-							if (BuildPreviewMarker->EditModeSupport) {
-								BuildPreviewMarker->EditModeSupport->PreviewMetadata = Metadata;
-								BuildPreviewMarker->BuildingType = EFortBuildingType::Stairs;
-								BuildPreviewMarker->EditModePatternData = Metadata;
-								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Stair::StaticClass();
-								//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, PlayerController->NetConnection);
-							}
-						}
-
-						if (Def == Roof) {
-							reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker->SetActorHiddenInGame(false);
-							static UClass* BuildClass = UObject::FindClass("BlueprintGeneratedClass PBWA_W1_RoofC_C.PBWA_W1_RoofC_C");
-							//static UBuildingEditModeMetadata* Metadata = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Roof EMP_Roof_RoofC.EMP_Roof_RoofC");
-							reinterpret_cast<Inventory::CurrentBuildableClassOffsetFix*>(PlayerController)->CurrentBuildableClass = BuildClass;
-							BuildPreviewMarker->EditModeSupport = (UBuildingEditModeSupport*)GGameplayStatics->SpawnObject(UBuildingEditModeSupport_Stair::StaticClass(), BuildPreviewMarker);
-							if (BuildPreviewMarker->EditModeSupport) {
-								BuildPreviewMarker->EditModeSupport->PreviewMetadata = Metadata;
-								BuildPreviewMarker->BuildingType = EFortBuildingType::Roof;
-								BuildPreviewMarker->EditModePatternData = Metadata;
-								BuildPreviewMarker->EditModeSupportClass = UBuildingEditModeSupport_Roof::StaticClass();
-								//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = BuildPreviewMarker;
-							}
-						}
-						BuildPreviewMarker->OnRep_MetaData();
-					}
-				}
-			}
 		}
 
 		if (FuncName == "ServerHandlePickup") {
@@ -687,16 +622,26 @@ namespace Core {
 			}
 		}*/
 
+		//Late Game
+#ifdef LATEGAME
+		if (FuncName == "OnSafeZoneStateChange") {
+			auto InParams = (Params::AFortSafeZoneIndicator_OnSafeZoneStateChange_Params*)Params;
+			AFortSafeZoneIndicator* Indicator = (AFortSafeZoneIndicator*)Obj;
+			Indicator->NextCenter = (FVector_NetQuantize100)SZLoc;
+			Indicator->LastCenter = (FVector_NetQuantize100)SZLoc;
+			Indicator->Radius = 7500;
+			Indicator->NextRadius = 7500;
+			Indicator->LastRadius = 7500;
+			Indicator->SafeZoneFinishShrinkTime = 1000000;
+		}
+#endif
+
 		//Misc
 		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll") {
 			return;
 		}
 
-		if (FuncName == "ServerLoadingScreenDropped") {
-			auto PC = (AFortPlayerControllerAthena*)Obj;
-		}
-
-		/*if (FuncName == "ServerChoosePart") {
+		if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
 			if (!InParams->ChosenCharacterPart) {
 				return;
@@ -714,7 +659,7 @@ namespace Core {
 					return;
 				}
 			}
-		}*/
+		}
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
@@ -774,6 +719,35 @@ namespace Core {
 		return ProcessEventO(Obj, Func, Params);
 	}
 
+	ABuildingFoundation* GetRandomFoundation() {
+		TArray<AActor*> Foundations;
+		GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, ABuildingFoundation::StaticClass(), &Foundations);
+		return (ABuildingFoundation*)Foundations[rand() % Foundations.Num()];
+	}
+
+	void InputThread() {
+		while (true) {
+#ifdef LATEGAME
+			if (GetAsyncKeyState(VK_F3) & 0x1) {
+				AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode);
+				AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GM->GameState);
+				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
+				Sleep(1000);
+				auto AC = GS->GetAircraft();
+				AC->FlightEndTime = 10.0f;
+				AC->FlightSpeed = 0.0f;
+				AC->FlightStartLocation = FVector(GetRandomFoundation()->K2_GetActorLocation() + FVector{ 0,0,10000 });
+				SZLoc = AC->FlightStartLocation;
+				AC->K2_TeleportTo(AC->FlightStartLocation, AC->K2_GetActorRotation());
+				GS->OnRep_Aircraft();
+				//GS->SafeZoneIndicator->OnSafeZoneStateChange(EFortSafeZoneState::Starting);
+
+			}
+#endif
+			Sleep(1000 / 30);
+		}
+	}
+
 	void Init() {
 		AllocConsole();
 		FILE* pFile;
@@ -808,8 +782,9 @@ namespace Core {
 		CreateHook(Base + Offsets::KickPlayer, Patch, nullptr);
 		CreateHook(Base + Offsets::ValidationFailure, Patch, nullptr);
 		CreateHook(Base + Offsets::CollectGarbage, Patch, nullptr);
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)InputThread, 0, 0, 0);
 		/*CreateHook(Base + Offsets::NoMcp, Patch, nullptr);*/
 		//CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
-		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
+		//CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
 	}
 }

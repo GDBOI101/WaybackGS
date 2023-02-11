@@ -163,7 +163,8 @@ namespace Hooks {
 	void (*TickFlushO)(UNetDriver* NetDriver, float DeltaSeconds);
 	void TickFlush_Hk(UNetDriver* NetDriver, float DeltaSeconds) {
 		if (NetDriver->ClientConnections.Num() > 0 && NetDriver->ClientConnections[0]->InternalAck == false) {
-			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Replication::ServerReplicateActors, NetDriver, 0, 0);
+			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Replication::ServerReplicateActors, NetDriver, 0, 0);
+			Replication::ServerReplicateActors(NetDriver);
 		}
 		return TickFlushO(NetDriver, DeltaSeconds);
 	}

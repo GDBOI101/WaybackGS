@@ -64,6 +64,8 @@ namespace Inventory {
 		QuickBars->OnRep_PrimaryQuickBar();
 		QuickBars->OnRep_SecondaryQuickBar();
 		QuickBars->ForceNetUpdate();
+		PC->ForceUpdateQuickbar(EFortQuickBars::Primary);
+		PC->ForceUpdateQuickbar(EFortQuickBars::Secondary);
 		WorldInventory->ForceNetUpdate();
 		WorldInventory->Inventory.MarkArrayDirty();
 	}
@@ -79,18 +81,18 @@ namespace Inventory {
 	}
 	
 	UFortWorldItem* GetItemInInv(AFortPlayerControllerAthena* PC, UFortItemDefinition* Def) {
-		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++) {
-			if (PC->WorldInventory->Inventory.ItemInstances[i]->GetItemDefinitionBP() == Def) {
-				return PC->WorldInventory->Inventory.ItemInstances[i];
+		for (int i = 0; i < reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances.Num(); i++) {
+			if (reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances[i]->GetItemDefinitionBP() == Def) {
+				return reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances[i];
 			}
 		}
 		return nullptr;
 	}
 	
 	FFortItemEntry GetEntryInInv(AFortPlayerControllerAthena* PC, FGuid GUID) {
-		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
-			if (PC->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
-				return PC->WorldInventory->Inventory.ReplicatedEntries[i];
+		for (int i = 0; i < reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
+			if (reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
+				return reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries[i];
 			}
 		}
 		return {};
@@ -122,8 +124,8 @@ namespace Inventory {
 	}
 
 	void DropItem(AFortPlayerControllerAthena* PC, FGuid GUID) {
-		auto Slot = GetItemSlot(PC, GUID);
-		if (Slot.first == EFortQuickBars::Secondary || Slot.second != -1) {
+		//auto Slot = GetItemSlot(PC, GUID);
+		/*if (Slot.first == EFortQuickBars::Secondary || Slot.second != -1)*/ {
 			auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
 			for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 				if (WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemGuid == GUID) {

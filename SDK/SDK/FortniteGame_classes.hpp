@@ -11096,10 +11096,10 @@ public:
 	uint8                                        Pad_4BE[0x30];                                     // Fixing Size After Last Property  [ Dumper-7 ]
 	int32                                        JumpFlashCount;                                    // 0x3B8(0x4)(Net, ZeroConstructor, IsPlainOldData, RepNotify, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	uint8                                        Pad_4BF[0x4];                                      // Fixing Size After Last Property  [ Dumper-7 ]
-	TSubclassOf<class UFortCameraMode_AthenaAircraft> CameraModeClass;                                   // 0x3C0(0x8)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, Protected, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierProtected)
+	TSubclassOf<class UFortCameraMode_AthenaAircraft> CameraModeClass;                              // 0x3C0(0x8)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, Protected, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	struct FRotator                              CameraInitialRotation;                             // 0x3C8(0xC)(Edit, BlueprintVisible, BlueprintReadOnly, IsPlainOldData, NoDestructor, Protected, NativeAccessSpecifierProtected)
 	struct FVector                               ExitLocation;                                      // 0x3D4(0xC)(Edit, BlueprintVisible, BlueprintReadOnly, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
-	struct FVector_NetQuantize100                FlightStartLocation;                               // 0x3E0(0xC)(Net, NoDestructor, Protected, NativeAccessSpecifierProtected)
+	struct FVector					             FlightStartLocation;                               // 0x3E0(0xC)(Net, NoDestructor, Protected, NativeAccessSpecifierProtected)
 	struct FRotator                              FlightStartRotation;                               // 0x3EC(0xC)(Net, IsPlainOldData, NoDestructor, Protected, NativeAccessSpecifierProtected)
 	float                                        FlightSpeed;                                       // 0x3F8(0x4)(Net, ZeroConstructor, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	float                                        FlightStartTime;                                   // 0x3FC(0x4)(Net, ZeroConstructor, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)

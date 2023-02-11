@@ -7,6 +7,8 @@
 #pragma comment(lib, "Minhook/minhook.lib")
 #include "Minhook/minhook.h"
 
+//#define LATEGAME
+
 void CreateHook(uintptr_t Address, void* Hook, void** OG = nullptr) {
 	MH_CreateHook((void*)Address, Hook, OG);
 	MH_EnableHook((void*)Address);
@@ -20,7 +22,7 @@ UFortEngine* GEngine;
 UGameplayStatics* GGameplayStatics;
 
 FQuat Rot2Quat(FRotator Rotation) {
-	FQuat Quat;
+	FQuat Quat = {};
 	auto DEG_TO_RAD = 3.14159 / 180;
 	auto DIVIDE_BY_2 = DEG_TO_RAD / 2;
 
