@@ -179,46 +179,14 @@ namespace Inventory {
 		return Item;
 	}
 
-	std::vector<UFortItemDefinition*> Loadout{};
-	std::vector<std::string> LootPool
-	{
-		"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_C_Ore_T02.WID_Assault_Auto_Athena_C_Ore_T02",
-		"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_C_Ore_T02.WID_Assault_SemiAuto_Athena_C_Ore_T02",
-		"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_C_Ore_T02.WID_Pistol_AutoHeavy_Athena_C_Ore_T02",
-		"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_C_Ore_T02.WID_Pistol_SemiAuto_Athena_C_Ore_T02",
-		"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_C_Ore_T02.WID_Pistol_SixShooter_Athena_C_Ore_T02",
-		"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_C_Ore_T03.WID_Shotgun_Standard_Athena_C_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_UC_Ore_T03.WID_Assault_Auto_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_UC_Ore_T03.WID_Assault_SemiAuto_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_UC_Ore_T03.WID_Pistol_AutoHeavy_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_UC_Ore_T03.WID_Pistol_Scavenger_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_UC_Ore_T03.WID_Pistol_SemiAuto_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_UC_Ore_T03.WID_Pistol_SixShooter_Athena_UC_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03"
-		"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_R_Ore_T03.WID_Assault_SemiAuto_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_Surgical_Athena_R_Ore_T03.WID_Assault_Surgical_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_R_Ore_T03.WID_Pistol_AutoHeavy_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_R_Ore_T03.WID_Pistol_Scavenger_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_R_Ore_T03.WID_Pistol_SemiAuto_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_R_Ore_T03.WID_Pistol_SixShooter_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Shotgun_SemiAuto_Athena_R_Ore_T03.WID_Shotgun_SemiAuto_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_R_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_R_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_Surgical_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Shotgun_SemiAuto_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Sniper_Standard_Scope_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03",
-		"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03"
-	};
+	std::vector<UFortWeaponRangedItemDefinition*> Loadout{};
 
-	std::vector<std::string> Consumables{
-		"FortWeaponRangedItemDefinition Athena_Shields.Athena_Shields",
-		"ortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff",
-		"FortWeaponRangedItemDefinition Athena_Medkit.Athena_Medkit",
-		"FortWeaponRangedItemDefinition Athena_Bandage.Athena_Bandage"
-	};
+	std::vector<UFortWeaponRangedItemDefinition*> LootPool;
+
+	std::vector<UFortWeaponRangedItemDefinition*> Consumables;
+
+	std::vector<UFortWeaponRangedItemDefinition*> Ammo;
+
 		
 	void SetupLoadout() {
 		Loadout = {
@@ -229,15 +197,84 @@ namespace Inventory {
 			nullptr,//Slot 5
 			nullptr,//Trap
 		};
+		
+		std::vector<std::string> LootPoolStr
+		{
+			"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_C_Ore_T02.WID_Assault_Auto_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_C_Ore_T02.WID_Assault_SemiAuto_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_C_Ore_T02.WID_Pistol_AutoHeavy_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_C_Ore_T02.WID_Pistol_SemiAuto_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_C_Ore_T02.WID_Pistol_SixShooter_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_C_Ore_T03.WID_Shotgun_Standard_Athena_C_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_UC_Ore_T03.WID_Assault_Auto_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_UC_Ore_T03.WID_Assault_SemiAuto_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_UC_Ore_T03.WID_Pistol_AutoHeavy_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_UC_Ore_T03.WID_Pistol_Scavenger_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_UC_Ore_T03.WID_Pistol_SemiAuto_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_UC_Ore_T03.WID_Pistol_SixShooter_Athena_UC_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03"
+			"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_R_Ore_T03.WID_Assault_SemiAuto_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_Surgical_Athena_R_Ore_T03.WID_Assault_Surgical_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_R_Ore_T03.WID_Pistol_AutoHeavy_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_R_Ore_T03.WID_Pistol_Scavenger_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_R_Ore_T03.WID_Pistol_SemiAuto_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_R_Ore_T03.WID_Pistol_SixShooter_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Shotgun_SemiAuto_Athena_R_Ore_T03.WID_Shotgun_SemiAuto_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_R_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_R_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_Surgical_Athena_VR_Ore_T03.WID_Assault_Surgical_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_VR_Ore_T03.WID_Pistol_Scavenger_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Shotgun_SemiAuto_Athena_VR_Ore_T03.WID_Shotgun_SemiAuto_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Sniper_Standard_Scope_Athena_VR_Ore_T03.WID_Sniper_Standard_Scope_Athena_VR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03",
+			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03"
+		};
+
+		std::vector<std::string> ConsumablesStr{
+			"FortWeaponRangedItemDefinition Athena_Shields.Athena_Shields",
+			"FortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff",
+			"FortWeaponRangedItemDefinition Athena_Medkit.Athena_Medkit",
+			"FortWeaponRangedItemDefinition Athena_Bandage.Athena_Bandage"
+		};
+
+		std::vector<std::string> AmmoStr{
+			"FortAmmoItemDefinition AmmoDataRockets.AmmoDataRockets",
+			"FortAmmoItemDefinition AthenaAmmoDataShells.AthenaAmmoDataShells",
+			"FortAmmoItemDefinition AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium",
+			"FortAmmoItemDefinition AthenaAmmoDataBulletsLight.AthenaAmmoDataBulletsLight",
+			"FortAmmoItemDefinition AthenaAmmoDataBulletsHeavy.AthenaAmmoDataBulletsHeavy"
+		};
+
+		for (std::string Item : LootPoolStr) {
+			auto Weapon = UObject::FindObject<UFortWeaponRangedItemDefinition>(Item);
+			if (Weapon) {
+				LootPool.push_back(Weapon);
+			}
+		}
+
+		for (std::string Item : ConsumablesStr) {
+			auto Weapon = UObject::FindObject<UFortWeaponRangedItemDefinition>(Item);
+			if (Weapon) {
+				Consumables.push_back(Weapon);
+			}
+		}
+
+		for (std::string Item : AmmoStr) {
+			auto Weapon = UObject::FindObject<UFortWeaponRangedItemDefinition>(Item);
+			if (Weapon) {
+				Ammo.push_back(Weapon);
+			}
+		}
 	}
 
 	void SetupInventory(AFortPlayerControllerAthena* PC) {
-		if (Loadout.empty()) {
-			SetupLoadout();
-		}
 		auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
 		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
 		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool"), 1, 0, EFortQuickBars::Primary);
+		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataShells.AthenaAmmoDataShells"), 8, 0, EFortQuickBars::Secondary);
+		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium"), 30, 0, EFortQuickBars::Secondary);
+		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsLight.AthenaAmmoDataBulletsLight"), 60, 0, EFortQuickBars::Secondary);
 		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall"), 1, 0, EFortQuickBars::Secondary);
 		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor"), 1, 1, EFortQuickBars::Secondary);
 		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W"), 1, 2, EFortQuickBars::Secondary);

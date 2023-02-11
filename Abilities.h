@@ -1,7 +1,7 @@
 #pragma once
 #include "Includes.h"
 namespace Abilities {
-	void GrantAbility(APlayerPawn_Athena_C* Pawn, UGameplayAbility* AbilityClass) {
+	void GrantAbility(AFortPlayerPawn* Pawn, UGameplayAbility* AbilityClass) {
 		//Make the Gameplay Ability Spec
 		FGameplayAbilitySpecHandle Handle{};
 		Handle.Handle = rand();
@@ -10,7 +10,7 @@ namespace Abilities {
 		GiveAbility(Pawn->AbilitySystemComponent, &Handle, Spec);
 	}
 
-	void GiveBaseAbilities(APlayerPawn_Athena_C* Pawn) {
+	void GiveBaseAbilities(AFortPlayerPawn* Pawn) {
 		static auto Jump = UObject::FindObjectFast<UGameplayAbility>("Default__FortGameplayAbility_Jump");
 		static auto Sprint = UObject::FindObjectFast<UGameplayAbility>("Default__FortGameplayAbility_Sprint");
 		static auto Consumable = UObject::FindObjectFast<UGameplayAbility>("Default__GA_DefaultPlayer_Consumable_C");
