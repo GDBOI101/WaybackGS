@@ -63,8 +63,9 @@ struct HasServerFinishedLoadingOffsetFix {
 };
 
 void FixPickups(AFortPlayerController* PC) {
-	reinterpret_cast<OverridenBackpackSizeOffsetFix*>(PC)->OverriddenBackpackSize = 5;
+	/*reinterpret_cast<OverridenBackpackSizeOffsetFix*>*/(PC)->OverriddenBackpackSize = 5;
 	if (PC->CheatManager) {
+		//Idk if this is needed
 		((UFortCheatManager*)PC->CheatManager)->BackpackSetSize(5);
 	}
 }
@@ -114,8 +115,9 @@ std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* P
 }
 
 void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1.F_Med_Head1"));
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Soldier_01.F_Med_Soldier_01"));
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH"));
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body"));
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses"));
 }
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
@@ -124,9 +126,9 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		return;
 	}
 	auto McpLoadout = UObject::FindObjectFast<UFortMcpContext>("FortMcpContext_0");
-	auto Loadout = PC->CustomizationLoadout;
+	auto Loadout = Pawn->CustomizationLoadout;
 	if (!Loadout.Character) {
-		Loadout = Pawn->CustomizationLoadout;
+		Loadout = PC->CustomizationLoadout;
 	}
 	if (!Loadout.Character) {
 		Loadout = McpLoadout->GetLoadoutForPlayer(PC->NetConnection->PlayerID);
@@ -146,7 +148,14 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		}
 		for (int i = 0; i < Specializations.Num(); i++) {
 			auto SpecializationName = Specializations[i].ObjectID.AssetPathName.ToString();
-			auto Specialization = LoadObject<UFortHeroSpecialization>(UFortHeroSpecialization::StaticClass(), std::wstring(SpecializationName.begin(), SpecializationName.end()).c_str());
+			LoadObject<UFortHeroSpecialization>(UFortHeroSpecialization::StaticClass(), std::wstring(SpecializationName.begin(), SpecializationName.end()).c_str());
+			auto pos2 = SpecializationName.find('/');
+			auto pos3 = SpecializationName.rfind('/');
+			if (pos2 != std::string::npos)
+			{
+				SpecializationName = SpecializationName.substr(pos2, pos3 + 1);
+			}
+			auto Specialization = UObject::FindObjectContains<UFortHeroSpecialization>(SpecializationName);
 			if (!Specialization) {
 				continue;
 			}
@@ -157,7 +166,16 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 
 			for (int x = 0; x < Parts.Num(); x++) {
 				auto PartName = Parts[x].ObjectID.AssetPathName.ToString();
-				auto Part = LoadObject<UCustomCharacterPart>(UCustomCharacterPart::StaticClass(), std::wstring(PartName.begin(), PartName.end()).c_str());
+				LoadObject<UCustomCharacterPart>(UCustomCharacterPart::StaticClass(), std::wstring(PartName.begin(), PartName.end()).c_str());
+				auto pos1 = PartName.find('/');
+				auto pos = PartName.rfind('/');
+				if (pos != std::string::npos)
+				{
+					PartName = PartName.substr(pos1, pos + 1);
+				}
+
+				auto Part = UObject::FindObjectContains<UCustomCharacterPart>(PartName);
+
 				if (!Part) {
 					continue;
 				}
@@ -229,11 +247,6 @@ namespace Hooks {
 		Inventory::AddItem(PC, AmmoDef, -AmmoToRemove, 0, EFortQuickBars::Secondary);
 	}
 
-	UNetConnection* GetNetConnection_Hk(APlayerController* PC)
-	{
-		return (UNetConnection*)PC->Player;
-	}
-
 	APlayerController* (*SpawnPlayActor)(UWorld* World, UNetConnection* Connection, ENetRole NetRole, FURL InUrl, void* UniqueId, FString& Error, uint8_t InNetPlayerIndex);
 	AFortPlayerControllerAthena* SpawnPlayActor_Hk(UWorld* World, UNetConnection* Connection, ENetRole NetRole, FURL InUrl, void* UniqueId, FString& Error, uint8_t InNetPlayerIndex) {
 		Replication::ServerReplicateActors_ProcessActors(Connection, Replication::ServerReplicateActors_BuildConsiderList(Connection->Driver));
@@ -253,7 +266,6 @@ namespace Hooks {
 		PlayerController->Possess(Pawn);
 		Pawn->SetMaxHealth(100);
 		Pawn->SetHealth(100);
-		ApplyDefaultCosmetics(Pawn);
 		PlayerState->SetOwner(PlayerController);
 		Pawn->PlayerState = PlayerState;
 		Replication::ReplicateToClient(Pawn, Connection);
@@ -306,8 +318,7 @@ namespace Hooks {
 		FixPickups(PlayerController);
 		Inventory::SetupInventory(PlayerController);
 		Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
-		//ApplyCosmetics(PlayerController);
-		ApplyDefaultCosmetics(Pawn);
+		ApplyCosmetics(PlayerController);
 		PlayerController->ServerExecuteInventoryItem(reinterpret_cast<Inventory::QuickbarOffsetFix*>(PlayerController)->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 
 		FixPickups(PlayerController);
@@ -326,8 +337,6 @@ namespace Hooks {
 		HealthSet->OnRep_Shield();
 		HealthSet->OnRep_CurrentShield();
 		
-		//reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker = SpawnActor<ABuildingPlayerPrimitivePreview>({ 0, 0, 5000 }, PlayerController);
-		//Replication::ReplicateToClient(reinterpret_cast<Inventory::BuildPreviewMarkerOffsetFix*>(PlayerController)->BuildPreviewMarker, Connection);
 		reinterpret_cast<IA_BitFieldOffsetFix*>(PlayerController)->bInfiniteAmmo = true;
 		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		return PlayerController;
@@ -367,14 +376,14 @@ namespace Core {
 		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);
 	}
 
-	std::ofstream ProcLog("PE.txt");
-
 	void (*ProcessEventO)(UObject* Obj, UFunction* Func, void* Params);
 	void ProcessEvent_Hk(UObject* Obj, UFunction* Func, void* Params) {
 		std::string FuncName = Func->GetName();
 		static bool bRTSM = false;
 		if (FuncName == "ReadyToStartMatch" && !bRTSM) {
 			bRTSM = true;
+			LoadObject(UCustomCharacterPart::StaticClass(), L"/Game/Athena/Heroes/Meshes/Heads/F_Med_Head1_ATH.F_Med_Head1_ATH");
+			LoadObject(UCustomCharacterPart::StaticClass(), L"/Game/Characters/CharacterParts/Hats/Ramirez_Glasses.Ramirez_Glasses");
 			Inventory::SetupLoadout();
 			StartServer();
 			AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(Obj);
@@ -410,8 +419,7 @@ namespace Core {
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
 			FixPickups(PlayerController);
-			((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1.F_Med_Head1"));
-			((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Soldier_01.F_Med_Soldier_01"));
+			ApplyCosmetics(PlayerController);
 			Abilities::GiveBaseAbilities(Pawn);
 			Inventory::Update(PlayerController);
 			FixPickups(PlayerController);
@@ -503,11 +511,6 @@ namespace Core {
 				return ProcessEventO(Obj, Func, Params);
 			}
 
-			/*static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
-			static UFortBuildingItemDefinition* Floor = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor");
-			static UFortBuildingItemDefinition* Stair = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W");
-			static UFortBuildingItemDefinition* Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");*/
-
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
 		}
 
@@ -545,7 +548,6 @@ namespace Core {
 			if (Actor) {
 				if (Actor->Class->GetName().contains("Tiered_Short_Ammo")) {
 					FVector Location = Actor->K2_GetActorLocation();
-					//TODO
 					Actor->K2_DestroyActor();
 					for (int i = 0; i < 3; i++) {
 						auto ItemDef = (UFortWeaponItemDefinition*)Inventory::Ammo[rand() % (Inventory::Ammo.size())];
@@ -641,7 +643,8 @@ namespace Core {
 			return;
 		}
 
-		if (FuncName == "ServerChoosePart") {
+		//Only allows owned cosmetics
+		/*if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
 			if (!InParams->ChosenCharacterPart) {
 				return;
@@ -659,7 +662,7 @@ namespace Core {
 					return;
 				}
 			}
-		}
+		}*/
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
@@ -744,6 +747,16 @@ namespace Core {
 
 			}
 #endif
+			if (GetAsyncKeyState(VK_F2) & 0x1) {
+				Sleep(1000);
+				std::ofstream log("Objects.txt");
+				for (int i = 0; i < UObject::GObjects->Num(); i++) {
+					UObject* Object = UObject::GObjects->GetByIndex(i);
+					std::string ObjName = Object->GetFullName();
+					std::string item = "\nName: " + ObjName;
+					log << item;
+				}
+			}
 			Sleep(1000 / 30);
 		}
 	}
@@ -761,13 +774,6 @@ namespace Core {
 		FnCloseChannel = decltype(FnCloseChannel)(Base + Offsets::CreateChannel);
 		FnClientSendAdjustment = decltype(FnClientSendAdjustment)(Base + Offsets::SendClientAdjustment);
 		FnCallPreReplication = decltype(FnCallPreReplication)(Base + Offsets::CallPreReplication);
-		/*std::ofstream log("Objects.txt");
-		for (int i = 0; i < UObject::GObjects->Num(); i++) {
-			UObject* Object = UObject::GObjects->GetByIndex(i);
-			std::string ObjName = Object->GetFullName();
-			std::string item = "\nName: " + ObjName;
-			log << item;
-		}*/
 
 		GGameplayStatics = UObject::FindObjectFast<UGameplayStatics>("Default__GameplayStatics");
 		GEngine = UObject::FindObjectFast<UFortEngine>("FortEngine_0");

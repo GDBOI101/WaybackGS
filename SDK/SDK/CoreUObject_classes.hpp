@@ -62,6 +62,25 @@ public:
 
 		return nullptr;
 	}
+	
+	template<typename UEType = UObject>
+	static UEType* FindObjectContains(const std::string& FullName, EClassCastFlags RequiredType = EClassCastFlags::None)
+	{
+		for (int i = 0; i < GObjects->Num(); ++i)
+		{
+			UObject* Object = GObjects->GetByIndex(i);
+	
+			if (!Object)
+				continue;
+			
+			if (Object->HasTypeFlag(RequiredType) && Object->GetFullName().contains(FullName))
+			{
+				return static_cast<UEType*>(Object);
+			}
+		}
+
+		return nullptr;
+	}
 
 
 	template<typename UEType = UObject>

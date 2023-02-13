@@ -1,40 +1,34 @@
 #pragma once
 #include "Includes.h"
 namespace Inventory {
-	struct QuickbarOffsetFix
+	struct QuickbarOffsetFix : public AFortPlayerControllerAthena
 	{
-		unsigned char UnknownData00[0x1A88];
-		AFortQuickBars* QuickBars;
+		/*unsigned char UnknownData00[0x1A88];
+		AFortQuickBars* QuickBars;*/
 	};
 	
-	struct WorldInventoryOffsetFix
+	struct WorldInventoryOffsetFix : public AFortPlayerControllerAthena
 	{
-		unsigned char UnknownData00[0x1D28];
-		AFortInventory* WorldInventory;
+		/*unsigned char UnknownData00[0x1D28];
+		AFortInventory* WorldInventory;*/
 	};
 
-	struct BuildPreviewMarkerOffsetFix
+	struct BuildPreviewMarkerOffsetFix : public AFortPlayerControllerAthena
 	{
-		unsigned char UnknownData00[0x1788];
-		ABuildingPlayerPrimitivePreview* BuildPreviewMarker;
+		/*unsigned char UnknownData00[0x1788];
+		ABuildingPlayerPrimitivePreview* BuildPreviewMarker;*/
 	};
 	
-	struct BuildPreviewMarkerMIDOffsetFix
+	struct BuildPreviewMarkerMIDOffsetFix : public AFortPlayerControllerAthena
 	{
-		unsigned char UnknownData00[0x1928];
-		UMaterialInstanceDynamic* BuildPreviewMarkerMID;
+		/*unsigned char UnknownData00[0x1928];
+		UMaterialInstanceDynamic* BuildPreviewMarkerMID;*/
 	};
 	
-	struct CurrentBuildableClassOffsetFix
+	struct CurrentBuildableClassOffsetFix : public AFortPlayerControllerAthena
 	{
-		unsigned char UnknownData00[0x1940];
-		UClass* CurrentBuildableClass;
-	};
-	
-	struct CurrentResourceTypeOffsetFix
-	{
-		unsigned char UnknownData00[0x1959];
-		EFortResourceType CurrentResourceType;
+		/*unsigned char UnknownData00[0x1940];
+		UClass* CurrentBuildableClass;*/
 	};
 
 	//Crashes

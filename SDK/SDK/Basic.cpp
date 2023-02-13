@@ -16,23 +16,25 @@ void InitGObjects()
 	UObject::GObjects = reinterpret_cast<TUObjectArray*>(uintptr_t(GetModuleHandle(0)) + Offsets::GObjects);
 }		
 
-FName FSoftObjectPtr::GetAssetPathName()
+FString FSoftObjectPtr::GetAssetPathName()
 {
 	return ObjectID.AssetPathName;
 }
-FString FSoftObjectPtr::GetSubPathString()
-{
-	return ObjectID.SubPathString;
-}
+
+//FString FSoftObjectPtr::GetSubPathString()
+//{
+//	return ObjectID.SubPathString;
+//}
 
 std::string FSoftObjectPtr::GetAssetPathNameStr()
 {
 	return ObjectID.AssetPathName.ToString();
 }
-std::string FSoftObjectPtr::GetSubPathStringStr()
-{
-	return ObjectID.SubPathString.ToString();
-}
+
+//std::string FSoftObjectPtr::GetSubPathStringStr()
+//{
+//	return ObjectID.SubPathString.ToString();
+//}
 
 class UObject* FWeakObjectPtr::Get() const
 {

@@ -54,9 +54,9 @@ T* SpawnActor(FVector Loc, AActor* Owner) {
 	return reinterpret_cast<T*>(GGameplayStatics->FinishSpawningActor(BeginSpawn, Transform));
 }
 
-template <class T>
+template <class T = UObject>
 T* LoadObject(UClass* Class, const wchar_t* Name) {
-	auto FnLoadObject = reinterpret_cast<T*(__fastcall*)(UClass*, UObject*, const wchar_t*, const wchar_t*, unsigned int, UPackageMap*, bool)>(Base + Offsets::StaticLoadObject);
+	static auto FnLoadObject = reinterpret_cast<T*(__fastcall*)(UClass*, UObject*, const wchar_t*, const wchar_t*, unsigned int, UPackageMap*, bool)>(Base + Offsets::StaticLoadObject);
 	return (T*)FnLoadObject(Class, nullptr, Name, 0, 0, 0, 0);
 }
 

@@ -1167,19 +1167,19 @@ public:
 class FSoftObjectPath_
 {
 public:
-	FName AssetPathName;
-	FString SubPathString;
+	//FName AssetPathName;
+	FString AssetPathName;
 };
 
-class alignas(8) FSoftObjectPtr : public TPersistentObjectPtr<FSoftObjectPath_>
+class FSoftObjectPtr : public TPersistentObjectPtr<FSoftObjectPath_>
 {
 public:
 
-	FName GetAssetPathName();
-	FString GetSubPathString();
+	FString GetAssetPathName();
+	//FString GetSubPathString();
 
 	std::string GetAssetPathNameStr();
-	std::string GetSubPathStringStr();
+	//std::string GetSubPathStringStr();
 };
 
 template<typename UEType>
