@@ -1,36 +1,6 @@
 #pragma once
 #include "Includes.h"
 namespace Inventory {
-	struct QuickbarOffsetFix : public AFortPlayerControllerAthena
-	{
-		/*unsigned char UnknownData00[0x1A88];
-		AFortQuickBars* QuickBars;*/
-	};
-	
-	struct WorldInventoryOffsetFix : public AFortPlayerControllerAthena
-	{
-		/*unsigned char UnknownData00[0x1D28];
-		AFortInventory* WorldInventory;*/
-	};
-
-	struct BuildPreviewMarkerOffsetFix : public AFortPlayerControllerAthena
-	{
-		/*unsigned char UnknownData00[0x1788];
-		ABuildingPlayerPrimitivePreview* BuildPreviewMarker;*/
-	};
-	
-	struct BuildPreviewMarkerMIDOffsetFix : public AFortPlayerControllerAthena
-	{
-		/*unsigned char UnknownData00[0x1928];
-		UMaterialInstanceDynamic* BuildPreviewMarkerMID;*/
-	};
-	
-	struct CurrentBuildableClassOffsetFix : public AFortPlayerControllerAthena
-	{
-		/*unsigned char UnknownData00[0x1940];
-		UClass* CurrentBuildableClass;*/
-	};
-
 	//Crashes
 	int GetMaxAmmo(UFortWeaponItemDefinition* ItemDef) {
 		if (ItemDef) {
@@ -47,12 +17,12 @@ namespace Inventory {
 		}
 		return 0;
 	}
-	
+
 	void Update(AFortPlayerControllerAthena* PC) {
-		auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
-		auto QuickBars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
-		PC->HandleWorldInventoryLocalUpdate();
+		auto WorldInventory = PC->WorldInventory;
+		auto QuickBars = PC->QuickBars;
 		WorldInventory->HandleInventoryLocalUpdate();
+		PC->HandleWorldInventoryLocalUpdate();
 		WorldInventory->bRequiresLocalUpdate = true;
 		PC->OnRep_QuickBar();
 		QuickBars->OnRep_PrimaryQuickBar();
@@ -65,7 +35,7 @@ namespace Inventory {
 	}
 
 	int GetOpenSlot(AFortPlayerControllerAthena* PC) {
-		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
+		auto Quickbars = PC->QuickBars;
 		for (int i = 0; i < 6; i++) {
 			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data == nullptr) {
 				return i;
@@ -73,27 +43,27 @@ namespace Inventory {
 		}
 		return -1;
 	}
-	
+
 	UFortWorldItem* GetItemInInv(AFortPlayerControllerAthena* PC, UFortItemDefinition* Def) {
-		for (int i = 0; i < reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances.Num(); i++) {
-			if (reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances[i]->GetItemDefinitionBP() == Def) {
-				return reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ItemInstances[i];
+		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++) {
+			if (PC->WorldInventory->Inventory.ItemInstances[i]->GetItemDefinitionBP() == Def) {
+				return PC->WorldInventory->Inventory.ItemInstances[i];
 			}
 		}
 		return nullptr;
 	}
-	
+
 	FFortItemEntry GetEntryInInv(AFortPlayerControllerAthena* PC, FGuid GUID) {
-		for (int i = 0; i < reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
-			if (reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
-				return reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory->Inventory.ReplicatedEntries[i];
+		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
+			if (PC->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
+				return PC->WorldInventory->Inventory.ReplicatedEntries[i];
 			}
 		}
 		return {};
 	}
-	
+
 	std::pair<EFortQuickBars, int> GetItemSlot(AFortPlayerControllerAthena* PC, FGuid GUID) {
-		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
+		auto Quickbars = PC->QuickBars;
 		for (int i = 0; i < Quickbars->PrimaryQuickBar.Slots.Num(); i++) {
 			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data && Quickbars->PrimaryQuickBar.Slots[i].Items[0] == GUID) {
 				return std::make_pair(EFortQuickBars::Primary, i);
@@ -118,33 +88,41 @@ namespace Inventory {
 	}
 
 	void DropItem(AFortPlayerControllerAthena* PC, FGuid GUID) {
-		//auto Slot = GetItemSlot(PC, GUID);
-		/*if (Slot.first == EFortQuickBars::Secondary || Slot.second != -1)*/ {
-			auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
-			for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
-				if (WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemGuid == GUID) {
-					SpawnPickup(WorldInventory->Inventory.ItemInstances[i], PC->Pawn->K2_GetActorLocation());
-					WorldInventory->Inventory.ItemInstances.RemoveAt(i);
-					break;
-				}
+		auto Slot = GetItemSlot(PC, GUID);
+		auto WorldInventory = PC->WorldInventory;
+		for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
+			if (WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemGuid == GUID) {
+				SpawnPickup(WorldInventory->Inventory.ItemInstances[i], PC->Pawn->K2_GetActorLocation());
+				WorldInventory->Inventory.ItemInstances.RemoveAt(i);
+				break;
 			}
-			for (int i = 0; i < WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
-				if (WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
-					WorldInventory->Inventory.ReplicatedEntries.RemoveAt(i);
-					break;
-				}
-			}
-
-			Update(PC);
 		}
+		for (int i = 0; i < WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
+			if (WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
+				WorldInventory->Inventory.ReplicatedEntries.RemoveAt(i);
+				break;
+			}
+		}
+		PC->QuickBars->ServerRemoveItemInternal(GUID, false, true);
+		PC->QuickBars->EmptySlot(Slot.first, Slot.second);
+		if (Slot.first == EFortQuickBars::Primary) {
+			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
+			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.ResetNum();
+		}
+		else if (Slot.first == EFortQuickBars::Secondary) {
+			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
+			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.ResetNum();
+		}
+		PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
+		Update(PC);
 	}
 
 	UFortWorldItem* AddItem(AFortPlayerControllerAthena* PC, UFortItemDefinition* ItemDef, int Count = 1, int Slot = -1, EFortQuickBars Quickbar = EFortQuickBars::Primary) {
 		if (Quickbar == EFortQuickBars::Primary && Slot == -1) {
 			Slot = GetOpenSlot(PC);
 		}
-		auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
-		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
+		auto WorldInventory = PC->WorldInventory;
+		auto Quickbars = PC->QuickBars;
 		bool Stack = false;
 		for (int i = 0; i < WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
 			auto Item = WorldInventory->Inventory.ReplicatedEntries[i];
@@ -183,7 +161,7 @@ namespace Inventory {
 
 	std::vector<UFortWeaponRangedItemDefinition*> Ammo;
 
-		
+
 	void SetupLoadout() {
 		Loadout = {
 			nullptr,//Slot 1
@@ -193,7 +171,7 @@ namespace Inventory {
 			nullptr,//Slot 5
 			nullptr,//Trap
 		};
-		
+
 		std::vector<std::string> LootPoolStr
 		{
 			"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_C_Ore_T02.WID_Assault_Auto_Athena_C_Ore_T02",
@@ -265,8 +243,8 @@ namespace Inventory {
 	}
 
 	void SetupInventory(AFortPlayerControllerAthena* PC) {
-		auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
-		auto Quickbars = reinterpret_cast<QuickbarOffsetFix*>(PC)->QuickBars;
+		auto WorldInventory = PC->WorldInventory;
+		auto Quickbars = PC->QuickBars;
 		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool"), 1, 0, EFortQuickBars::Primary);
 		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataShells.AthenaAmmoDataShells"), 8, 0, EFortQuickBars::Secondary);
 		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium"), 30, 0, EFortQuickBars::Secondary);
@@ -293,13 +271,12 @@ namespace Inventory {
 		return nullptr;
 	}
 
-	UFortItemDefinition* EquipInventoryItem(AFortPlayerControllerAthena* PC, FGuid ItemGuid) {
-		auto WorldInventory = reinterpret_cast<WorldInventoryOffsetFix*>(PC)->WorldInventory;
+	AFortWeapon* EquipInventoryItem(AFortPlayerControllerAthena* PC, FGuid ItemGuid) {
+		auto WorldInventory = PC->WorldInventory;
 		for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 			auto Item = WorldInventory->Inventory.ItemInstances[i];
 			if (Item->GetItemGuid() == ItemGuid) {
-				EquipItem(PC, Item);
-				return Item->GetItemDefinitionBP();
+				return EquipItem(PC, Item);
 			}
 		}
 

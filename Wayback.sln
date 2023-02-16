@@ -5,8 +5,6 @@ VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Wayback", "Wayback.vcxproj", "{A8DBB6D6-04B4-4B94-9180-4A4861ACD5FF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JGS Client", "..\Client\JGS Client.vcxproj", "{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -23,14 +21,6 @@ Global
 		{A8DBB6D6-04B4-4B94-9180-4A4861ACD5FF}.Release|x64.Build.0 = Release|x64
 		{A8DBB6D6-04B4-4B94-9180-4A4861ACD5FF}.Release|x86.ActiveCfg = Release|Win32
 		{A8DBB6D6-04B4-4B94-9180-4A4861ACD5FF}.Release|x86.Build.0 = Release|Win32
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Debug|x64.ActiveCfg = Debug|x64
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Debug|x64.Build.0 = Debug|x64
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Debug|x86.ActiveCfg = Debug|Win32
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Debug|x86.Build.0 = Debug|Win32
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Release|x64.ActiveCfg = Release|x64
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Release|x64.Build.0 = Release|x64
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Release|x86.ActiveCfg = Release|Win32
-		{7E7B1902-5876-4AC0-8A46-6930BF4C0BB2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

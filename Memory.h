@@ -17,6 +17,7 @@ namespace Offsets {
 	int SpawnPlayActor = 0x228AEA0;
 	int NCM = 0x2559A80;
 	int NoMcp = 0x634810;
+	int DispatchRequest = 0x3CAEBB0;
 	int GetNetMode = 0x2558380;
 	int HandleReloadCost = 0x971CF0;
 
