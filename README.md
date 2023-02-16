@@ -8,3 +8,9 @@ Backpack full fix
 Server Sided Build Previews (Credit: Ender & Milxnor)
 <br>
 Proper Listening (No Beacons)
+<br>
+Harvesting
+<br>
+Floor Loot
+<br>
+Chest Loot
