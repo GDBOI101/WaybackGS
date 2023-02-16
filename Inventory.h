@@ -104,7 +104,6 @@ namespace Inventory {
 			}
 		}
 		PC->QuickBars->ServerRemoveItemInternal(GUID, false, true);
-		PC->QuickBars->EmptySlot(Slot.first, Slot.second);
 		if (Slot.first == EFortQuickBars::Primary) {
 			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
 			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.ResetNum();
@@ -254,9 +253,9 @@ namespace Inventory {
 		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W"), 1, 2, EFortQuickBars::Secondary);
 		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS"), 1, 3, EFortQuickBars::Secondary);
 
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData"), 999, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData"), 999, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData"), 999, 0, EFortQuickBars::Secondary);
+		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData"), 1, 0, EFortQuickBars::Secondary);
+		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData"), 1, 0, EFortQuickBars::Secondary);
+		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData"), 1, 0, EFortQuickBars::Secondary);
 	}
 
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {

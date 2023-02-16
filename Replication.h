@@ -45,6 +45,9 @@ namespace Replication {
 	}
 
 	void ReplicateToClient(AActor* Actor, UNetConnection* Client) {
+		if (!Actor) {
+			return;
+		}
 		if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) {
 			return;
 		}
@@ -87,6 +90,9 @@ namespace Replication {
 		if (Connections.Num()) {
 			for (int i = 0; i < Connections.Num(); i++) {
 				UNetConnection* Connection = Connections[i];
+				if (!Connection) {
+					continue;
+				}
 				AActor* OwningActor = Connection->OwningActor;
 				if (OwningActor != nullptr) {
 					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->GetViewTarget() : OwningActor);
@@ -126,12 +132,11 @@ namespace Replication {
 			if (Actor == nullptr || Connection == nullptr) continue;
 			UActorChannel* Ch = FindOrGetCh(Connection, Actor);
 			if (Ch == nullptr) {
-				return FinalActors;
+				continue;
 			}
-			{
+			else {
 				FinalActors++;
 				ReplicateToClient(Actor, Connection);
-				if (Actor->bReplicateMovement) Actor->OnRep_AttachmentReplication();
 			}
 		}
 		Actors.empty();
@@ -146,11 +151,13 @@ namespace Replication {
 		auto ConsiderList = ServerReplicateActors_BuildConsiderList(NetDriver);
 		for (int i = 0; i < NetDriver->ClientConnections.Num(); i++) {
 			UNetConnection* Connection = NetDriver->ClientConnections[i];
-			if (Connection->ViewTarget) {
-				if (Connection->PlayerController) {
-					FnClientSendAdjustment(Connection->PlayerController);
-					int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
-					LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
+			if (Connection) {
+				if (Connection->ViewTarget) {
+					if (Connection->PlayerController) {
+						FnClientSendAdjustment(Connection->PlayerController);
+						int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
+						LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
+					}
 				}
 			}
 		}

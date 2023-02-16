@@ -96,6 +96,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 	if (!Pawn) {
 		return;
 	}
+	return ApplyDefaultCosmetics(Pawn);
 	auto Loadout = PC->CustomizationLoadout;
 	if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
@@ -221,12 +222,11 @@ namespace Hooks {
 		auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
 		PlayerState->SetReplicates(true);
 		APlayerPawn_Athena_C* Pawn = SpawnPawn();
+		Pawn->bCanBeDamaged = false;
 		Pawn->SetOwner(PlayerController);
 		Pawn->SetReplicates(true);
 		PlayerController->Possess(Pawn);
 		PlayerController->ClientForceProfileQuery();
-		Pawn->SetMaxHealth(100);
-		Pawn->SetHealth(100);
 		PlayerState->SetOwner(PlayerController);
 		Pawn->PlayerState = PlayerState;
 		Replication::ReplicateToClient(Pawn, Connection);
@@ -333,6 +333,31 @@ namespace Core {
 		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);
 	}
 
+	void SpawnFloorLoot() {
+		TArray<AActor*> FloorLootActors;
+		GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, UObject::FindObjectFast<UClass>("Tiered_Athena_FloorLoot_01_C"), &FloorLootActors);
+		for (int i = 0; i < FloorLootActors.Num(); i++) {
+			auto Actor = FloorLootActors[i];
+
+			FVector Location = Actor->K2_GetActorLocation();
+
+			auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
+			while (!ItemDef) {
+				ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
+			}
+			UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
+			Item->ItemEntry.Count = 1;
+			Inventory::SpawnPickup(Item, Location);
+
+			int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
+			UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
+			Ammo->ItemEntry.Count = ACount;
+			Inventory::SpawnPickup(Ammo, Location);
+
+			Actor->K2_DestroyActor();
+		}
+	}
+
 	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
 	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
 		*((DWORD*)RequestContent + 0x18) = 3;
@@ -361,6 +386,7 @@ namespace Core {
 			GS->GamePhase = EAthenaGamePhase::Warmup;
 			GS->OnRep_GamePhase(OldGP);
 			GS->WarmupCountdownEndTime = 99990.0f;
+			SpawnFloorLoot();
 		}
 
 		//Battle Bus
@@ -370,6 +396,7 @@ namespace Core {
 			Pawn->SetOwner(PlayerController);
 			PlayerController->Possess(Pawn);
 			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
+			Pawn->SetMaxHealth(100);
 			Pawn->SetHealth(100);
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
@@ -564,7 +591,7 @@ namespace Core {
 		}
 
 		//Harvesting (No Work)
-		/*if (FuncName == "ClientReportDamagedResourceBuilding") {
+		if (FuncName == "ClientReportDamagedResourceBuilding") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
 			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
@@ -593,10 +620,10 @@ namespace Core {
 				if (InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
 					AFortPlayerController* FortController = (AFortPlayerController*)InParams->InstigatedBy;
 					if (FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
-						FortController->ClientReportDamagedResourceBuilding(BuildingActor, BuildingActor->ResourceType, 6, false, (InParams->Damage == 100.f));
+						FortController->ClientReportDamagedResourceBuilding(BuildingActor, BuildingActor->ResourceType, 6, BuildingActor->bDestroyed, (InParams->Damage == 100.f));
 				}
 			}
-		}*/
+		}
 
 		//Late Game
 #ifdef LATEGAME
@@ -615,6 +642,12 @@ namespace Core {
 		//Misc
 		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll") {
 			return;
+		}
+
+		if (FuncName == "ClientOnPawnDied") {
+			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
+			PlayerController->bMarkedAlive = false;
+			reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft--;
 		}
 		
 		if (FuncName == "ServerLoadingScreenDropped") {
