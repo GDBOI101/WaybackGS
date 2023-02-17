@@ -7,6 +7,10 @@ Backpack full fix
 <br>
 Server Sided Build Previews (Credit: Ender & Milxnor)
 <br>
-Skin and Pickaxe from Lobby
-<br>
 Proper Listening (No Beacons)
+<br>
+Harvesting
+<br>
+Floor Loot
+<br>
+Chest Loot
