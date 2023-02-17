@@ -274,6 +274,11 @@ public:
 	{
 		return FVector{ this->X + A.X, this->Y + A.Y, this->Z + A.Z };
 	}
+
+	FVector operator*(float A)
+	{
+		return FVector{ this->X * A, this->Y * A, this->Z * A };
+	}
 };
 
 // 0x10 (0x10 - 0x0)

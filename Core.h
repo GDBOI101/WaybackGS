@@ -645,9 +645,26 @@ namespace Core {
 		}
 
 		if (FuncName == "ClientOnPawnDied") {
+			auto InParams = (Params::AFortPlayerControllerZone_ClientOnPawnDied_Params*)Params;
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			PlayerController->bMarkedAlive = false;
 			reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft--;
+			auto Pickaxe = PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0];
+			for (int i = 0; i < PlayerController->WorldInventory->Inventory.ItemInstances.Num(); i++) {
+				auto Item = PlayerController->WorldInventory->Inventory.ItemInstances[i];
+				if (Item && Item->GetItemGuid() != Pickaxe) {
+					Inventory::DropItem(PlayerController, Item->GetItemGuid());
+				}
+			}
+			if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft < 2) {
+				if (InParams->DeathReport.KillerPawn) {
+					auto KPC = (AFortPlayerControllerAthena*)InParams->DeathReport.KillerPawn->Controller;
+					if (KPC) {
+						KPC->ClientNotifyWon();
+						KPC->PlayWinEffects();
+					}
+				}
+			}
 		}
 		
 		if (FuncName == "ServerLoadingScreenDropped") {
@@ -658,7 +675,7 @@ namespace Core {
 		}
 
 		//Only allows owned cosmetics
-		if (FuncName == "ServerChoosePart") {
+		/*if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
 			if (!InParams->ChosenCharacterPart) {
 				return;
@@ -676,7 +693,7 @@ namespace Core {
 					return;
 				}
 			}
-		}
+		}*/
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
@@ -702,6 +719,23 @@ namespace Core {
 			if (InParams->BuildingActorToEdit) {
 				auto Loc = InParams->BuildingActorToEdit->K2_GetActorLocation();
 				auto Rot = InParams->BuildingActorToEdit->K2_GetActorRotation();
+				auto ForwardVector = InParams->BuildingActorToEdit->GetActorForwardVector();
+				auto RightVector = InParams->BuildingActorToEdit->GetActorRightVector();
+				if (InParams->BuildingActorToEdit->BuildingType != EFortBuildingType::Wall) // Centers building pieces if necessary
+				{
+					switch (InParams->RotationIterations)
+					{
+					case 1:
+						Loc = Loc + ForwardVector * 256.0f + RightVector * 256.0f;
+						break;
+					case 2:
+						Loc = Loc + RightVector * 512.0f;
+						break;
+					case 3:
+						Loc = Loc + ForwardVector * -256.0f + RightVector * 256.0f;
+					}
+				}
+				Rot.Yaw = (round(float((int(Rot.Yaw) + 360) % 360) / 10) * 10) + 90 * InParams->RotationIterations;
 				InParams->BuildingActorToEdit->K2_DestroyActor();
 				FBuildingClassData Data = {};
 				Data.PreviousBuildingLevel = 0;
@@ -761,12 +795,12 @@ namespace Core {
 
 			}
 #endif
-			if (GetAsyncKeyState(VK_F1) & 0x1) {
+			if (GetAsyncKeyState(VK_F6) & 0x1) {
 				Sleep(1000);
 				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
 			}
 			
-			if (GetAsyncKeyState(VK_F2) & 0x1) {
+			if (GetAsyncKeyState(VK_F7) & 0x1) {
 				Sleep(1000);
 				std::ofstream log("Objects.txt");
 				for (int i = 0; i < UObject::GObjects->Num(); i++) {

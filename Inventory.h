@@ -261,10 +261,10 @@ namespace Inventory {
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
 		if (PC->Pawn && ItemDef) {
 			AFortWeapon* WeaponData = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->GetItemGuid());
-			if (WeaponData) {
+/*			if (WeaponData) {
 				WeaponData->ClientGivenTo(PC->Pawn);
 				reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->ClientInternalEquipWeapon(WeaponData);
-			}
+			}*/
 			return WeaponData;
 		}
 		return nullptr;
