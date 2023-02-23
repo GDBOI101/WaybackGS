@@ -5,17 +5,29 @@
 #include "Abilities.h"
 #include <ostream>
 #include <fstream>
+
+static __forceinline bool IsBadReadPtr(void* p)
+{
+	MEMORY_BASIC_INFORMATION mbi;
+	if (VirtualQuery(p, &mbi, sizeof(mbi)))
+	{
+		DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
+		bool b = !(mbi.Protect & mask);
+		if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
+
+		return b;
+	}
+	return true;
+}
+
 FVector GetSpawnLoc() {
 	TArray<AActor*> SpawnLocs = {};
 	GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, AFortPlayerStartWarmup::StaticClass(), &SpawnLocs);
-	return SpawnLocs[(rand() % SpawnLocs.Num())]->K2_GetActorLocation();
+	return SpawnLocs[(rand() % (size_t)SpawnLocs.Num())]->K2_GetActorLocation();
 }
 
 APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 	APlayerPawn_Athena_C* Pawn = SpawnActor<APlayerPawn_Athena_C>(SpawnLoc, nullptr);
-	if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->AuthorityGameMode->GameState)->GamePhase == EAthenaGamePhase::Warmup) {
-		//Pawn->bCanBeDamaged = false;
-	}
 	Pawn->HealthRegenDelayGameplayEffect = nullptr;
 	Pawn->ShieldRegenDelayGameplayEffect = nullptr;
 	Pawn->ShieldRegenGameplayEffect = nullptr;
@@ -293,7 +305,7 @@ namespace Hooks {
 		HealthSet->Shield.CurrentValue = 100;
 		HealthSet->OnRep_Shield();
 		HealthSet->OnRep_CurrentShield();
-		
+
 		PlayerController->bInfiniteAmmo = true;
 		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		return PlayerController;
@@ -393,7 +405,6 @@ namespace Core {
 		if (FuncName == "ServerAttemptAircraftJump") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			APlayerPawn_Athena_C* Pawn = SpawnPawn(((AFortGameStateAthena*)GEngine->GameViewport->World->GameState)->GetAircraft()->K2_GetActorLocation());
-			Pawn->SetOwner(PlayerController);
 			PlayerController->Possess(Pawn);
 			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
 			Pawn->SetMaxHealth(100);
@@ -408,7 +419,6 @@ namespace Core {
 			HealthSet->Shield.CurrentValue = 100;
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
-			FixPickups(PlayerController);
 			ApplyCosmetics(PlayerController);
 			Abilities::GiveBaseAbilities(Pawn);
 			Inventory::Update(PlayerController);
@@ -502,11 +512,12 @@ namespace Core {
 			}
 
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-
-			if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
-				AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
-				BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
-				BuildingTool->OnRep_DefaultMetadata();
+			if (!IsBadReadPtr(Weapon)) {
+				if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
+					AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
+					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
+					BuildingTool->OnRep_DefaultMetadata();
+				}
 			}
 		}
 
@@ -529,7 +540,6 @@ namespace Core {
 
 			InParams->Pickup->K2_DestroyActor();
 
-
 			Inventory::AddItem(PlayerController, ItemEntry.ItemDefinition, ItemEntry.Count, -1, QB);
 		}
 
@@ -547,7 +557,8 @@ namespace Core {
 
 			auto Actor = InParams->ReceivingActor;
 			if (Actor) {
-				if (Actor->Class->GetName().contains("Tiered_Short_Ammo")) {
+				auto ClassName = Actor->Class->GetName();
+				if (ClassName.contains("Tiered_Short_Ammo")) {
 					FVector Location = Actor->K2_GetActorLocation();
 					Actor->K2_DestroyActor();
 					for (int i = 0; i < 3; i++) {
@@ -563,7 +574,7 @@ namespace Core {
 					return;
 				}
 
-				if (Actor->Class->GetName().contains("Tiered_Chest")) {
+				if (ClassName.contains("Tiered_Chest")) {
 					FVector Location = Actor->K2_GetActorLocation();
 					Actor->K2_DestroyActor();
 					auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
@@ -586,6 +597,27 @@ namespace Core {
 					Item2->ItemEntry.Count = Count;
 					Inventory::SpawnPickup(Item2, Location);
 					return;
+				}
+
+				if (ClassName.contains("AthenaSupplyDrop_02")) {
+					FVector Location = Actor->K2_GetActorLocation();
+					Actor->K2_DestroyActor();
+					static auto ItemDef = UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_AMR_Athena_SR_Ore_T03.WID_Sniper_AMR_Athena_SR_Ore_T03");
+					UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
+					Item->ItemEntry.Count = 1;
+					Inventory::SpawnPickup(Item, Location);
+
+					int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
+					UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
+					Ammo->ItemEntry.Count = ACount;
+					Inventory::SpawnPickup(Ammo, Location);
+
+					UFortWeaponRangedItemDefinition* ItemDef2 = Inventory::Consumables[rand() % (Inventory::Consumables.size())];
+					int Count = (ItemDef2->MaxStackSize / 2);
+
+					UFortWorldItem* Item2 = (UFortWorldItem*)ItemDef2->CreateTemporaryItemInstanceBP(Count, 1);
+					Item2->ItemEntry.Count = Count;
+					Inventory::SpawnPickup(Item2, Location);
 				}
 			}
 		}
@@ -619,7 +651,7 @@ namespace Core {
 				static UFortWeaponMeleeItemDefinition* PicaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 				if (InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
 					AFortPlayerController* FortController = (AFortPlayerController*)InParams->InstigatedBy;
-					if (FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
+					if (FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
 						FortController->ClientReportDamagedResourceBuilding(BuildingActor, BuildingActor->ResourceType, 6, BuildingActor->bDestroyed, (InParams->Damage == 100.f));
 				}
 			}
@@ -640,7 +672,7 @@ namespace Core {
 #endif
 
 		//Misc
-		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll") {
+		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll" || FuncName == "ServerPlayEmoteItem") {
 			return;
 		}
 
@@ -666,7 +698,7 @@ namespace Core {
 				}
 			}
 		}
-		
+
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
 			ApplyCosmetics(PlayerController);
@@ -697,6 +729,9 @@ namespace Core {
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
+			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
+			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
+			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
 			auto InParams = (Params::AFortPlayerController_ServerCreateBuildingActor_Params*)(Params);
 			auto Class = InParams->BuildingClassData.BuildingClass;
 			auto Loc = InParams->BuildLoc;
@@ -705,11 +740,28 @@ namespace Core {
 			ABuildingSMActor* Build = (ABuildingSMActor*)SpawnActor2(Class, Rot, Loc);
 
 			if (Build) {
-				auto PC = (AFortPlayerController*)(Obj);
+				auto PC = (AFortPlayerControllerAthena*)(Obj);
 				Build->bPlayerPlaced = true;
 				Build->SetMirrored(InParams->bMirrored);
 				Build->ForceNetUpdate();
 				Build->InitializeKismetSpawnedBuildingActor(Build, PC);
+				switch (Build->ResourceType) {
+				case EFortResourceType::Wood:
+				{
+					Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
+					break;
+				}
+				case EFortResourceType::Stone:
+				{
+					Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
+					break;
+				}
+				case EFortResourceType::Metal:
+				{
+					Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
+					break;
+				}
+				}
 			}
 		}
 
@@ -737,11 +789,19 @@ namespace Core {
 				}
 				Rot.Yaw = (round(float((int(Rot.Yaw) + 360) % 360) / 10) * 10) + 90 * InParams->RotationIterations;
 				InParams->BuildingActorToEdit->K2_DestroyActor();
-				FBuildingClassData Data = {};
+				/*FBuildingClassData Data = {};
 				Data.PreviousBuildingLevel = 0;
 				Data.UpgradeLevel = 1;
 				Data.BuildingClass = InParams->NewBuildingClass;
-				PC->ServerCreateBuildingActor(Data, Loc, Rot, InParams->bMirrored);
+				PC->ServerCreateBuildingActor(Data, Loc, Rot, InParams->bMirrored);*/
+				ABuildingSMActor* Build = (ABuildingSMActor*)SpawnActor2(InParams->NewBuildingClass, Rot, Loc);
+
+				if (Build) {
+					Build->bPlayerPlaced = true;
+					Build->SetMirrored(InParams->bMirrored);
+					Build->ForceNetUpdate();
+					Build->InitializeKismetSpawnedBuildingActor(Build, PC);
+				}
 			}
 		}
 
@@ -759,14 +819,17 @@ namespace Core {
 			static UFortEditToolItemDefinition* EditToolDef = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
 			if (PC && InParams->BuildingActorToEdit) {
 				auto EditTool = Inventory::GetItemInInv(PC, EditToolDef);
-				auto EditToolData = (AFortWeap_EditingTool*)Inventory::EquipItem(PC, EditTool);
-				InParams->BuildingActorToEdit->EditingPlayer = (AFortPlayerStateZone*)PC->PlayerState;
-				InParams->BuildingActorToEdit->OnRep_EditingPlayer();
-				if (EditToolData) {
-					EditToolData->EditActor = InParams->BuildingActorToEdit;
+				if (EditTool && !IsBadReadPtr(EditTool)) {
+					auto EditToolData = (AFortWeap_EditingTool*)Inventory::EquipItem(PC, EditTool);
+					InParams->BuildingActorToEdit->EditingPlayer = (AFortPlayerStateZone*)PC->PlayerState;
+					InParams->BuildingActorToEdit->OnRep_EditingPlayer();
+					if (EditToolData) {
+						EditToolData->EditActor = InParams->BuildingActorToEdit;
+					}
 				}
 			}
 		}
+
 		return ProcessEventO(Obj, Func, Params);
 	}
 
@@ -793,13 +856,13 @@ namespace Core {
 				GS->OnRep_Aircraft();
 				//GS->SafeZoneIndicator->OnSafeZoneStateChange(EFortSafeZoneState::Starting);
 
-			}
+}
 #endif
 			if (GetAsyncKeyState(VK_F6) & 0x1) {
 				Sleep(1000);
 				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
 			}
-			
+
 			if (GetAsyncKeyState(VK_F7) & 0x1) {
 				Sleep(1000);
 				std::ofstream log("Objects.txt");

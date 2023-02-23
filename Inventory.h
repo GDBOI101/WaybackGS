@@ -105,6 +105,7 @@ namespace Inventory {
 		}
 		PC->QuickBars->ServerRemoveItemInternal(GUID, false, true);
 		if (Slot.first == EFortQuickBars::Primary) {
+			PC->QuickBars->EmptySlot(Slot.first, Slot.second);
 			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
 			PC->QuickBars->PrimaryQuickBar.Slots[Slot.second].Items.ResetNum();
 		}
@@ -112,8 +113,8 @@ namespace Inventory {
 			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.Data = nullptr;
 			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.ResetNum();
 		}
-		PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 		Update(PC);
+		PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 	}
 
 	UFortWorldItem* AddItem(AFortPlayerControllerAthena* PC, UFortItemDefinition* ItemDef, int Count = 1, int Slot = -1, EFortQuickBars Quickbar = EFortQuickBars::Primary) {
