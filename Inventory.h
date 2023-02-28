@@ -245,27 +245,21 @@ namespace Inventory {
 	void SetupInventory(AFortPlayerControllerAthena* PC) {
 		auto WorldInventory = PC->WorldInventory;
 		auto Quickbars = PC->QuickBars;
-		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool"), 1, 0, EFortQuickBars::Primary);
-		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataShells.AthenaAmmoDataShells"), 8, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium"), 30, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortEditToolItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsLight.AthenaAmmoDataBulletsLight"), 60, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall"), 1, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor"), 1, 1, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W"), 1, 2, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS"), 1, 3, EFortQuickBars::Secondary);
-
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData"), 1, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData"), 1, 0, EFortQuickBars::Secondary);
-		AddItem(PC, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData"), 1, 0, EFortQuickBars::Secondary);
+		static auto EditTool = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
+		static auto Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
+		static auto Floor = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor");
+		static auto Stair = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W");
+		static auto Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");
+		AddItem(PC, EditTool, 1, 0, EFortQuickBars::Primary);
+		AddItem(PC, Wall, 1, 0, EFortQuickBars::Secondary);
+		AddItem(PC, Floor, 1, 1, EFortQuickBars::Secondary);
+		AddItem(PC, Stair, 1, 2, EFortQuickBars::Secondary);
+		AddItem(PC, Roof, 1, 3, EFortQuickBars::Secondary);
 	}
 
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
 		if (PC->Pawn && ItemDef) {
 			AFortWeapon* WeaponData = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->GetItemGuid());
-/*			if (WeaponData) {
-				WeaponData->ClientGivenTo(PC->Pawn);
-				reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->ClientInternalEquipWeapon(WeaponData);
-			}*/
 			return WeaponData;
 		}
 		return nullptr;

@@ -32,10 +32,10 @@ APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 	Pawn->ShieldRegenDelayGameplayEffect = nullptr;
 	Pawn->ShieldRegenGameplayEffect = nullptr;
 	Pawn->HealthRegenGameplayEffect = nullptr;
-	Pawn->SetReplicates(true);
+	/*Pawn->SetReplicates(true);
 	Pawn->SetReplicateMovement(true);
 	Pawn->OnRep_ReplicatedBasedMovement();
-	Pawn->OnRep_ReplicatedMovement();
+	Pawn->OnRep_ReplicatedMovement();*/
 	return Pawn;
 }
 
@@ -235,10 +235,7 @@ namespace Hooks {
 		PlayerState->SetReplicates(true);
 		APlayerPawn_Athena_C* Pawn = SpawnPawn();
 		Pawn->bCanBeDamaged = false;
-		Pawn->SetOwner(PlayerController);
-		Pawn->SetReplicates(true);
 		PlayerController->Possess(Pawn);
-		PlayerController->ClientForceProfileQuery();
 		PlayerState->SetOwner(PlayerController);
 		Pawn->PlayerState = PlayerState;
 		Replication::ReplicateToClient(Pawn, Connection);
@@ -259,7 +256,7 @@ namespace Hooks {
 		PlayerState->OnRep_bHasStartedPlaying();
 		PlayerState->bAlwaysRelevant = true;
 
-		PlayerState->OnRep_PlayerTeam();
+		//PlayerState->OnRep_PlayerTeam();
 		auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
 		WorldInventory->bAlwaysRelevant = true;
 		WorldInventory->InventoryType = EFortInventoryType::World;
@@ -274,16 +271,6 @@ namespace Hooks {
 		PlayerController->QuickBars = QuickBars;
 		PlayerController->QuickBars = QuickBars;
 		PlayerController->OnRep_QuickBar();
-		QuickBars->EnableSlot(EFortQuickBars::Primary, 0);
-		QuickBars->EnableSlot(EFortQuickBars::Primary, 1);
-		QuickBars->EnableSlot(EFortQuickBars::Primary, 2);
-		QuickBars->EnableSlot(EFortQuickBars::Primary, 3);
-		QuickBars->EnableSlot(EFortQuickBars::Primary, 4);
-		QuickBars->EnableSlot(EFortQuickBars::Secondary, 0);
-		QuickBars->EnableSlot(EFortQuickBars::Secondary, 1);
-		QuickBars->EnableSlot(EFortQuickBars::Secondary, 2);
-		QuickBars->EnableSlot(EFortQuickBars::Secondary, 3);
-		QuickBars->EnableSlot(EFortQuickBars::Secondary, 4);
 
 		Abilities::GiveBaseAbilities(Pawn);
 
@@ -743,7 +730,6 @@ namespace Core {
 				auto PC = (AFortPlayerControllerAthena*)(Obj);
 				Build->bPlayerPlaced = true;
 				Build->SetMirrored(InParams->bMirrored);
-				Build->ForceNetUpdate();
 				Build->InitializeKismetSpawnedBuildingActor(Build, PC);
 				switch (Build->ResourceType) {
 				case EFortResourceType::Wood:
@@ -799,7 +785,6 @@ namespace Core {
 				if (Build) {
 					Build->bPlayerPlaced = true;
 					Build->SetMirrored(InParams->bMirrored);
-					Build->ForceNetUpdate();
 					Build->InitializeKismetSpawnedBuildingActor(Build, PC);
 				}
 			}
