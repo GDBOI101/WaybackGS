@@ -175,6 +175,7 @@ namespace Inventory {
 		std::vector<std::string> LootPoolStr
 		{
 			"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_C_Ore_T02.WID_Assault_Auto_Athena_C_Ore_T02",
+			"FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_C_Ore_T02.WID_Assault_SemiAuto_Athena_C_Ore_T02",
 			"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_C_Ore_T02.WID_Pistol_AutoHeavy_Athena_C_Ore_T02",
 			"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_C_Ore_T02.WID_Pistol_SemiAuto_Athena_C_Ore_T02",
@@ -186,7 +187,7 @@ namespace Inventory {
 			"FortWeaponRangedItemDefinition WID_Pistol_Scavenger_Athena_UC_Ore_T03.WID_Pistol_Scavenger_Athena_UC_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Pistol_SemiAuto_Athena_UC_Ore_T03.WID_Pistol_SemiAuto_Athena_UC_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Pistol_SixShooter_Athena_UC_Ore_T03.WID_Pistol_SixShooter_Athena_UC_Ore_T03",
-			"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03"
+			"FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Assault_SemiAuto_Athena_R_Ore_T03.WID_Assault_SemiAuto_Athena_R_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Assault_Surgical_Athena_R_Ore_T03.WID_Assault_Surgical_Athena_R_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Pistol_AutoHeavy_Athena_R_Ore_T03.WID_Pistol_AutoHeavy_Athena_R_Ore_T03",
@@ -202,7 +203,7 @@ namespace Inventory {
 			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Sniper_Standard_Scope_Athena_VR_Ore_T03.WID_Sniper_Standard_Scope_Athena_VR_Ore_T03",
 			"FortWeaponRangedItemDefinition WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03",
-			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03"
+			"FortWeaponRangedItemDefinition WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_SR_Ore_T03",
 		};
 
 		std::vector<std::string> ConsumablesStr{
@@ -224,6 +225,9 @@ namespace Inventory {
 			auto Weapon = UObject::FindObject<UFortWeaponRangedItemDefinition>(Item);
 			if (Weapon) {
 				LootPool.push_back(Weapon);
+			}
+			else {
+				MessageBoxA(0, Item.c_str(), "Test", MB_OK);
 			}
 		}
 

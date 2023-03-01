@@ -26,6 +26,12 @@ FVector GetSpawnLoc() {
 	return SpawnLocs[(rand() % (size_t)SpawnLocs.Num())]->K2_GetActorLocation();
 }
 
+ABuildingFoundation* GetRandomFoundation() {
+	TArray<AActor*> Foundations;
+	GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, ABuildingFoundation::StaticClass(), &Foundations);
+	return (ABuildingFoundation*)Foundations[rand() % Foundations.Num()];
+}
+
 APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 	APlayerPawn_Athena_C* Pawn = SpawnActor<APlayerPawn_Athena_C>(SpawnLoc, nullptr);
 	Pawn->HealthRegenDelayGameplayEffect = nullptr;
@@ -48,18 +54,18 @@ void FixPickups(AFortPlayerController* PC) {
 }
 
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
-	auto Loadout = PC->CustomizationLoadout;
+	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
+	//auto Loadout = PC->CustomizationLoadout;
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
-	if (!Loadout.Character) {
+	/*if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
 	}
 	if (!Loadout.Character) {
 		static UFortMcpContext* MCPContext = UObject::FindObjectFast<UFortMcpContext>("FortMcpContext_0");
 		Loadout = MCPContext->GetLoadoutForPlayer(PC->NetConnection->PlayerID);
-	}
-	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
+	}*/
 	std::vector<UCustomCharacterPart*> Ret = Base;
-	if (Loadout.Character) {
+	/*if (Loadout.Character) {
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return Ret;
@@ -92,15 +98,18 @@ std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* P
 				Ret.push_back(Part);
 			}
 		}
-	}
+	}*/
 
 	return Ret;
 }
 
 void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH"));
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body"));
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses"));
+	static auto Head = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH");
+	static auto Body = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body");
+	static auto Hat = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses");
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, Head);
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, Body);
+	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, Hat);
 }
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
@@ -161,13 +170,13 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC) {
 	static auto DefaultPickaxe = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 	auto Pickaxe = DefaultPickaxe;
-	auto Loadout = PC->CustomizationLoadout;
+	/*auto Loadout = PC->CustomizationLoadout;
 	if (!Loadout.Character) {
 		Loadout = reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->CustomizationLoadout;
 	}
 	if (Loadout.Pickaxe) {
 		Pickaxe = Loadout.Pickaxe->WeaponDefinition;
-	}
+	}*/
 	return Pickaxe;
 }
 
@@ -232,11 +241,9 @@ namespace Hooks {
 		Replication::ReplicateToClient(PlayerController->PlayerState, Connection);
 		Replication::ReplicateToClient(World->GameState, Connection);
 		auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
-		PlayerState->SetReplicates(true);
 		APlayerPawn_Athena_C* Pawn = SpawnPawn();
 		Pawn->bCanBeDamaged = false;
 		PlayerController->Possess(Pawn);
-		PlayerState->SetOwner(PlayerController);
 		Pawn->PlayerState = PlayerState;
 		Replication::ReplicateToClient(Pawn, Connection);
 		PlayerController->bClientPawnIsLoaded = true;
@@ -396,6 +403,7 @@ namespace Core {
 			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
 			Pawn->SetMaxHealth(100);
 			Pawn->SetHealth(100);
+#ifndef LATEGAME
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
 			HealthSet->CurrentShield.BaseValue = 0;
@@ -404,6 +412,30 @@ namespace Core {
 			HealthSet->Shield.Maximum = 100;
 			HealthSet->Shield.BaseValue = 100;
 			HealthSet->Shield.CurrentValue = 100;
+#else
+			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
+			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
+			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
+			static UFortWeaponRangedItemDefinition* AR = Inventory::LootPool[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03");
+			static UFortWeaponRangedItemDefinition* SG = Inventory::LootPool[13];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
+			static UFortWeaponRangedItemDefinition* SJ = Inventory::Consumables[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff");
+
+			Inventory::AddItem(PlayerController, Wood, 999, 0, EFortQuickBars::Secondary);
+			Inventory::AddItem(PlayerController, Stone, 999, 0, EFortQuickBars::Secondary);
+			Inventory::AddItem(PlayerController, Metal, 999, 0, EFortQuickBars::Secondary);
+			Inventory::AddItem(PlayerController, SG, 1, 1, EFortQuickBars::Primary);
+			Inventory::AddItem(PlayerController, AR, 1, 2, EFortQuickBars::Primary);
+			Inventory::AddItem(PlayerController, SJ, 1, 3, EFortQuickBars::Primary);
+
+			HealthSet->CurrentShield.Minimum = 0;
+			HealthSet->CurrentShield.Maximum = 100;
+			HealthSet->CurrentShield.BaseValue = 100;
+			HealthSet->CurrentShield.CurrentValue = 0;
+			HealthSet->Shield.Minimum = 0;
+			HealthSet->Shield.Maximum = 100;
+			HealthSet->Shield.BaseValue = 100;
+			HealthSet->Shield.CurrentValue = 100;
+#endif
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
 			ApplyCosmetics(PlayerController);
@@ -638,7 +670,7 @@ namespace Core {
 				static UFortWeaponMeleeItemDefinition* PicaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 				if (InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
 					AFortPlayerController* FortController = (AFortPlayerController*)InParams->InstigatedBy;
-					if (FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
+					if (FortController && FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
 						FortController->ClientReportDamagedResourceBuilding(BuildingActor, BuildingActor->ResourceType, 6, BuildingActor->bDestroyed, (InParams->Damage == 100.f));
 				}
 			}
@@ -647,14 +679,40 @@ namespace Core {
 		//Late Game
 #ifdef LATEGAME
 		if (FuncName == "OnSafeZoneStateChange") {
+			AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode);
 			auto InParams = (Params::AFortSafeZoneIndicator_OnSafeZoneStateChange_Params*)Params;
 			AFortSafeZoneIndicator* Indicator = (AFortSafeZoneIndicator*)Obj;
 			Indicator->NextCenter = (FVector_NetQuantize100)SZLoc;
 			Indicator->LastCenter = (FVector_NetQuantize100)SZLoc;
-			Indicator->Radius = 7500;
-			Indicator->NextRadius = 7500;
-			Indicator->LastRadius = 7500;
-			Indicator->SafeZoneFinishShrinkTime = 1000000;
+			Indicator->Radius = 10000;
+			Indicator->NextRadius = 10000;
+			Indicator->LastRadius = 10000;
+			if (GM->SafeZonePhase == 0 || GM->SafeZonePhase == 1) {
+				GM->SafeZonePhase = 2;
+			}
+			else {
+				Indicator->SafeZoneFinishShrinkTime = 99999;
+			}
+		}
+
+		if (FuncName == "OnAircraftEnteredDropZone") {
+			static bool Set = false;
+			if (!Set) {
+				Set = true;
+				SZLoc = FVector(GetRandomFoundation()->K2_GetActorLocation() + FVector{ 0,0,10000 });
+				AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(Obj);
+				AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GM->GameState);
+				auto AC = GS->GetAircraft();
+				AC->FlightEndTime = 1.0f;
+				AC->FlightSpeed = 0.0f;
+				AC->FlightStartLocation = SZLoc;
+				AC->K2_TeleportTo(AC->FlightStartLocation, AC->K2_GetActorRotation());
+				GS->OnRep_Aircraft();
+				GS->SafeZonesStartTime = 1;
+				GS->GamePhase = EAthenaGamePhase::SafeZones;
+				GS->OnRep_GamePhase(EAthenaGamePhase::Aircraft);
+				GS->SafeZonesStartTime = 1;
+			}
 		}
 #endif
 
@@ -694,7 +752,7 @@ namespace Core {
 		}
 
 		//Only allows owned cosmetics
-		/*if (FuncName == "ServerChoosePart") {
+		if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
 			if (!InParams->ChosenCharacterPart) {
 				return;
@@ -712,7 +770,7 @@ namespace Core {
 					return;
 				}
 			}
-		}*/
+		}
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
@@ -775,11 +833,6 @@ namespace Core {
 				}
 				Rot.Yaw = (round(float((int(Rot.Yaw) + 360) % 360) / 10) * 10) + 90 * InParams->RotationIterations;
 				InParams->BuildingActorToEdit->K2_DestroyActor();
-				/*FBuildingClassData Data = {};
-				Data.PreviousBuildingLevel = 0;
-				Data.UpgradeLevel = 1;
-				Data.BuildingClass = InParams->NewBuildingClass;
-				PC->ServerCreateBuildingActor(Data, Loc, Rot, InParams->bMirrored);*/
 				ABuildingSMActor* Build = (ABuildingSMActor*)SpawnActor2(InParams->NewBuildingClass, Rot, Loc);
 
 				if (Build) {
@@ -818,31 +871,8 @@ namespace Core {
 		return ProcessEventO(Obj, Func, Params);
 	}
 
-	ABuildingFoundation* GetRandomFoundation() {
-		TArray<AActor*> Foundations;
-		GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, ABuildingFoundation::StaticClass(), &Foundations);
-		return (ABuildingFoundation*)Foundations[rand() % Foundations.Num()];
-	}
-
 	void InputThread() {
 		while (true) {
-#ifdef LATEGAME
-			if (GetAsyncKeyState(VK_F3) & 0x1) {
-				AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode);
-				AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GM->GameState);
-				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
-				Sleep(1000);
-				auto AC = GS->GetAircraft();
-				AC->FlightEndTime = 10.0f;
-				AC->FlightSpeed = 0.0f;
-				AC->FlightStartLocation = FVector(GetRandomFoundation()->K2_GetActorLocation() + FVector{ 0,0,10000 });
-				SZLoc = AC->FlightStartLocation;
-				AC->K2_TeleportTo(AC->FlightStartLocation, AC->K2_GetActorRotation());
-				GS->OnRep_Aircraft();
-				//GS->SafeZoneIndicator->OnSafeZoneStateChange(EFortSafeZoneState::Starting);
-
-}
-#endif
 			if (GetAsyncKeyState(VK_F6) & 0x1) {
 				Sleep(1000);
 				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);

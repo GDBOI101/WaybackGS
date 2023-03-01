@@ -7,7 +7,7 @@
 #pragma comment(lib, "Minhook/minhook.lib")
 #include "Minhook/minhook.h"
 
-//#define LATEGAME
+#define LATEGAME
 
 void CreateHook(uintptr_t Address, void* Hook, void** OG = nullptr) {
 	MH_CreateHook((void*)Address, Hook, OG);
