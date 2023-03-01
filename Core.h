@@ -6,20 +6,6 @@
 #include <ostream>
 #include <fstream>
 
-static __forceinline bool IsBadReadPtr(void* p)
-{
-	MEMORY_BASIC_INFORMATION mbi;
-	if (VirtualQuery(p, &mbi, sizeof(mbi)))
-	{
-		DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
-		bool b = !(mbi.Protect & mask);
-		if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
-
-		return b;
-	}
-	return true;
-}
-
 FVector GetSpawnLoc() {
 	TArray<AActor*> SpawnLocs = {};
 	GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, AFortPlayerStartWarmup::StaticClass(), &SpawnLocs);
@@ -531,7 +517,7 @@ namespace Core {
 			}
 
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-			if (!IsBadReadPtr(Weapon)) {
+			if (Weapon && !IsBadReadPtr(Weapon)) {
 				if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
 					AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
 					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
@@ -778,33 +764,35 @@ namespace Core {
 			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
 			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
 			auto InParams = (Params::AFortPlayerController_ServerCreateBuildingActor_Params*)(Params);
-			auto Class = InParams->BuildingClassData.BuildingClass;
-			auto Loc = InParams->BuildLoc;
-			auto Rot = InParams->BuildRot;
+			if (!InParams) {
+				auto Class = InParams->BuildingClassData.BuildingClass;
+				auto Loc = InParams->BuildLoc;
+				auto Rot = InParams->BuildRot;
 
-			ABuildingSMActor* Build = (ABuildingSMActor*)SpawnActor2(Class, Rot, Loc);
+				ABuildingSMActor* Build = (ABuildingSMActor*)SpawnActor2(Class, Rot, Loc);
 
-			if (Build) {
-				auto PC = (AFortPlayerControllerAthena*)(Obj);
-				Build->bPlayerPlaced = true;
-				Build->SetMirrored(InParams->bMirrored);
-				Build->InitializeKismetSpawnedBuildingActor(Build, PC);
-				switch (Build->ResourceType) {
-				case EFortResourceType::Wood:
-				{
-					Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
-					break;
-				}
-				case EFortResourceType::Stone:
-				{
-					Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
-					break;
-				}
-				case EFortResourceType::Metal:
-				{
-					Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
-					break;
-				}
+				if (Build) {
+					auto PC = (AFortPlayerControllerAthena*)(Obj);
+					Build->bPlayerPlaced = true;
+					Build->SetMirrored(InParams->bMirrored);
+					Build->InitializeKismetSpawnedBuildingActor(Build, PC);
+					switch (Build->ResourceType) {
+					case EFortResourceType::Wood:
+					{
+						Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
+					case EFortResourceType::Stone:
+					{
+						Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
+					case EFortResourceType::Metal:
+					{
+						Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
+					}
 				}
 			}
 		}
@@ -872,7 +860,7 @@ namespace Core {
 	}
 
 	void InputThread() {
-		while (true) {
+		/*while (true) {
 			if (GetAsyncKeyState(VK_F6) & 0x1) {
 				Sleep(1000);
 				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
@@ -889,7 +877,7 @@ namespace Core {
 				}
 			}
 			Sleep(1000 / 30);
-		}
+		}*/
 	}
 
 	void Init() {

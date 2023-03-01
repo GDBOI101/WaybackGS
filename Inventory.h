@@ -263,8 +263,17 @@ namespace Inventory {
 
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
 		if (PC->Pawn && ItemDef) {
-			AFortWeapon* WeaponData = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->GetItemGuid());
-			return WeaponData;
+			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->GetItemGuid());
+			if (Weapon && !IsBadReadPtr(Weapon)) {
+				Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
+				Weapon->ItemEntryGuid = ItemDef->GetItemGuid();
+				Weapon->SetOwner(PC->Pawn);
+				Weapon->OnRep_ReplicatedWeaponData();
+				Weapon->OnRep_AmmoCount();
+				Weapon->ClientGivenTo(PC->Pawn);
+				reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->ClientInternalEquipWeapon(Weapon);
+				return Weapon;
+			}
 		}
 		return nullptr;
 	}
