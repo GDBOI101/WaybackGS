@@ -24,10 +24,6 @@ APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 	Pawn->ShieldRegenDelayGameplayEffect = nullptr;
 	Pawn->ShieldRegenGameplayEffect = nullptr;
 	Pawn->HealthRegenGameplayEffect = nullptr;
-	/*Pawn->SetReplicates(true);
-	Pawn->SetReplicateMovement(true);
-	Pawn->OnRep_ReplicatedBasedMovement();
-	Pawn->OnRep_ReplicatedMovement();*/
 	return Pawn;
 }
 
@@ -41,22 +37,21 @@ void FixPickups(AFortPlayerController* PC) {
 
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
 	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
-	//auto Loadout = PC->CustomizationLoadout;
+	auto Loadout = PC->CustomizationLoadout;
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
-	/*if (!Loadout.Character) {
+	if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
 	}
-	if (!Loadout.Character) {
-		static UFortMcpContext* MCPContext = UObject::FindObjectFast<UFortMcpContext>("FortMcpContext_0");
-		Loadout = MCPContext->GetLoadoutForPlayer(PC->NetConnection->PlayerID);
-	}*/
 	std::vector<UCustomCharacterPart*> Ret = Base;
-	/*if (Loadout.Character) {
+	if (Loadout.Character) {
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return Ret;
 		}
-		auto Hero = CID->HeroDefinition;
+		auto ParsedID = CID->GetName().substr(0, 7);
+		ParsedID[0] = 'H';
+		std::string ToFind = "FortHeroType " + ParsedID + "." + ParsedID;
+		auto Hero = UObject::FindObject<UFortHeroType>(ToFind);
 		if (!Hero) {
 			return Ret;
 		}
@@ -84,7 +79,7 @@ std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* P
 				Ret.push_back(Part);
 			}
 		}
-	}*/
+	}
 
 	return Ret;
 }
@@ -103,21 +98,19 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 	if (!Pawn) {
 		return;
 	}
-	return ApplyDefaultCosmetics(Pawn);
 	auto Loadout = PC->CustomizationLoadout;
 	if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
-	}
-	if (!Loadout.Character) {
-		static UFortMcpContext* MCPContext = UObject::FindObjectFast<UFortMcpContext>("FortMcpContext_0");
-		Loadout = MCPContext->GetLoadoutForPlayer(PC->NetConnection->PlayerID);
 	}
 	if (Loadout.Character) {
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
 		}
-		auto Hero = CID->HeroDefinition;
+		auto ParsedID = CID->GetName().substr(0, 7);
+		ParsedID[0] = 'H';
+		std::string ToFind = "FortHeroType " + ParsedID + "." + ParsedID;
+		auto Hero = UObject::FindObject<UFortHeroType>(ToFind);
 		if (!Hero) {
 			return ApplyDefaultCosmetics(Pawn);
 		}
@@ -148,7 +141,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		}
 	}
 	else {
-		//MessageBoxA(0, "INVALID", "Test", MB_OK);
+		LOG("CustomizationLoadout is invalid!", false);
 		return ApplyDefaultCosmetics(Pawn);
 	}
 }
@@ -156,13 +149,13 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC) {
 	static auto DefaultPickaxe = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 	auto Pickaxe = DefaultPickaxe;
-	/*auto Loadout = PC->CustomizationLoadout;
+	auto Loadout = PC->CustomizationLoadout;
 	if (!Loadout.Character) {
 		Loadout = reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->CustomizationLoadout;
 	}
 	if (Loadout.Pickaxe) {
 		Pickaxe = Loadout.Pickaxe->WeaponDefinition;
-	}*/
+	}
 	return Pickaxe;
 }
 
@@ -229,8 +222,9 @@ namespace Hooks {
 		auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
 		APlayerPawn_Athena_C* Pawn = SpawnPawn();
 		Pawn->bCanBeDamaged = false;
-		PlayerController->Possess(Pawn);
 		Pawn->PlayerState = PlayerState;
+		Pawn->OnRep_PlayerState();
+		PlayerController->Possess(Pawn);
 		Replication::ReplicateToClient(Pawn, Connection);
 		PlayerController->bClientPawnIsLoaded = true;
 		PlayerController->bReadyToStartMatch = true;
@@ -319,10 +313,10 @@ namespace Core {
 		GEngine->GameViewport->World->LevelCollections[1].NetDriver = NetDriver;
 		uintptr_t TickFlushAddr = (Base + Offsets::TickFlush);
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
-		uintptr_t SpawnPlayActorAddr = (Base + Offsets::SpawnPlayActor);
-		CreateHook(SpawnPlayActorAddr, Hooks::SpawnPlayActor_Hk, (void**)&Hooks::SpawnPlayActor);
-		uintptr_t NCMAddr = (Base + Offsets::NCM);
-		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);
+		/*uintptr_t SpawnPlayActorAddr = (Base + Offsets::SpawnPlayActor);
+		CreateHook(SpawnPlayActorAddr, Hooks::SpawnPlayActor_Hk, (void**)&Hooks::SpawnPlayActor);*/
+		/*uintptr_t NCMAddr = (Base + Offsets::NCM);
+		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);*/
 	}
 
 	void SpawnFloorLoot() {
@@ -381,6 +375,73 @@ namespace Core {
 			SpawnFloorLoot();
 		}
 
+		if (FuncName == "HandleStartingNewPlayer") {
+			AFortPlayerControllerAthena* PlayerController = *(AFortPlayerControllerAthena**)Params;
+			auto Connection = PlayerController->NetConnection;
+			Replication::ReplicateToClient(PlayerController, Connection);
+			Replication::ReplicateToClient(PlayerController->PlayerState, Connection);
+			Replication::ReplicateToClient(GEngine->GameViewport->World->GameState, Connection);
+			auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
+			APlayerPawn_Athena_C* Pawn = SpawnPawn();
+			Pawn->bCanBeDamaged = false;
+			Pawn->PlayerState = PlayerState;
+			Pawn->OnRep_PlayerState();
+			PlayerController->Possess(Pawn);
+			Replication::ReplicateToClient(Pawn, Connection);
+			PlayerController->bClientPawnIsLoaded = true;
+			PlayerController->bReadyToStartMatch = true;
+			PlayerController->bAssignedStartSpawn = true;
+			PlayerController->bHasInitiallySpawned = true;
+			PlayerController->bHasClientFinishedLoading = true;
+			PlayerController->bHasServerFinishedLoading = true;
+			PlayerController->OnRep_bHasServerFinishedLoading();
+			PlayerController->ServerReadyToStartMatch();
+			ApplyCosmetics(PlayerController);
+			PlayerState->OnRep_CharacterParts();
+
+			PlayerState->bHasStartedPlaying = true;
+			PlayerState->bHasFinishedLoading = true;
+			PlayerState->bIsReadyToContinue = true;
+			PlayerState->OnRep_bHasStartedPlaying();
+
+			auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
+			WorldInventory->InventoryType = EFortInventoryType::World;
+			WorldInventory->Inventory = FFortItemList();
+			WorldInventory->Inventory.ReplicatedEntries = TArray<struct FFortItemEntry>(6);
+			WorldInventory->Inventory.ItemInstances = TArray<class UFortWorldItem*>(6);
+			WorldInventory->SetOwner(PlayerController);
+			PlayerController->WorldInventory = WorldInventory;
+			AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
+			QuickBars->SetOwner(PlayerController);
+			PlayerController->QuickBars = QuickBars;
+			PlayerController->QuickBars = QuickBars;
+			PlayerController->OnRep_QuickBar();
+
+			Abilities::GiveBaseAbilities(Pawn);
+
+			FixPickups(PlayerController);
+			Inventory::SetupInventory(PlayerController);
+
+			FixPickups(PlayerController);
+			PlayerController->bHasInitializedWorldInventory = true;
+			Inventory::Update(PlayerController);
+
+			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
+			HealthSet->CurrentShield.Minimum = 0;
+			HealthSet->CurrentShield.Maximum = 100;
+			HealthSet->CurrentShield.BaseValue = 0;
+			HealthSet->CurrentShield.CurrentValue = 0;
+			HealthSet->Shield.Minimum = 0;
+			HealthSet->Shield.Maximum = 100;
+			HealthSet->Shield.BaseValue = 100;
+			HealthSet->Shield.CurrentValue = 100;
+			HealthSet->OnRep_Shield();
+			HealthSet->OnRep_CurrentShield();
+
+			PlayerController->bInfiniteAmmo = true;
+			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
+		}
+
 		//Battle Bus
 		if (FuncName == "ServerAttemptAircraftJump") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
@@ -399,9 +460,6 @@ namespace Core {
 			HealthSet->Shield.BaseValue = 100;
 			HealthSet->Shield.CurrentValue = 100;
 #else
-			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
-			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
-			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
 			static UFortWeaponRangedItemDefinition* AR = Inventory::LootPool[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03");
 			static UFortWeaponRangedItemDefinition* SG = Inventory::LootPool[13];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
 			static UFortWeaponRangedItemDefinition* SJ = Inventory::Consumables[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff");
@@ -631,9 +689,6 @@ namespace Core {
 		if (FuncName == "ClientReportDamagedResourceBuilding") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
-			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
-			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
-			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
 			UFortResourceItemDefinition* ItemDef = nullptr;
 			if (InParams->PotentialResourceType == EFortResourceType::Wood)
 				ItemDef = Wood;
@@ -734,7 +789,8 @@ namespace Core {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
 			ApplyCosmetics(PlayerController);
 			Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
-			PlayerController->ServerExecuteInventoryItem(PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
+			//PlayerController->ServerExecuteInventoryItem(PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
+			PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
 		}
 
 		//Only allows owned cosmetics
@@ -760,11 +816,8 @@ namespace Core {
 
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
-			static UFortResourceItemDefinition* Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
-			static UFortResourceItemDefinition* Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
-			static UFortResourceItemDefinition* Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
 			auto InParams = (Params::AFortPlayerController_ServerCreateBuildingActor_Params*)(Params);
-			if (!InParams) {
+			if (InParams && !IsBadReadPtr(InParams)) {
 				auto Class = InParams->BuildingClassData.BuildingClass;
 				auto Loc = InParams->BuildLoc;
 				auto Rot = InParams->BuildRot;
@@ -859,27 +912,6 @@ namespace Core {
 		return ProcessEventO(Obj, Func, Params);
 	}
 
-	void InputThread() {
-		/*while (true) {
-			if (GetAsyncKeyState(VK_F6) & 0x1) {
-				Sleep(1000);
-				UObject::FindObjectFast<UKismetSystemLibrary>("Default__KismetSystemLibrary")->ExecuteConsoleCommand(GEngine->GameViewport->World, L"startaircraft", nullptr);
-			}
-
-			if (GetAsyncKeyState(VK_F7) & 0x1) {
-				Sleep(1000);
-				std::ofstream log("Objects.txt");
-				for (int i = 0; i < UObject::GObjects->Num(); i++) {
-					UObject* Object = UObject::GObjects->GetByIndex(i);
-					std::string ObjName = Object->GetFullName();
-					std::string item = "\nName: " + ObjName;
-					log << item;
-				}
-			}
-			Sleep(1000 / 30);
-		}*/
-	}
-
 	void Init() {
 		AllocConsole();
 		FILE* pFile;
@@ -911,7 +943,6 @@ namespace Core {
 		//CreateHook(Base + Offsets::NoMcp, Patch, nullptr);
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)InputThread, 0, 0, 0);
 
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 

@@ -10,7 +10,7 @@ namespace Replication {
 	void(__fastcall* FnCallPreReplication)(AActor* Actor, UNetDriver* NetDriver);
 
 	UActorChannel* FindOrGetCh(UNetConnection* Client, AActor* Actor) {
-		if (Client == nullptr) {
+		if (Client == nullptr || IsBadReadPtr(Client)) {
 			return nullptr;
 		}
 		//Find an existing channel
@@ -23,32 +23,36 @@ namespace Replication {
 		}
 		//No Channel found, create one
 		UActorChannel* Ch = reinterpret_cast<UActorChannel*>(FnCreateChannel(Client, 2, true, -1));
-		FnSetChannelActor(Ch, Actor);
-		Ch->Connection = Client;
+		if (Ch) {
+			FnSetChannelActor(Ch, Actor);
+			Ch->Connection = Client;
+		}
 		return Ch;
 	}
 
-	//FIX ME
+	//TEST ME
 	bool IsNetRelevantFor(AActor* InActor, UNetConnection* Client) {
-		if (!InActor) {
+		if (!InActor || !Client || !Client->ViewTarget) {
 			return false;
 		}
-		auto FnIsNetRelevantFor = reinterpret_cast<bool(__fastcall*)(AActor * InActor, AActor * RealViewer, AActor * ViewTarget, FVector & SrcLocation)>(InActor->Vft[Offsets::IsNetRelevantFor]);
+		static auto FnIsNetRelevantFor = reinterpret_cast<bool(__fastcall*)(AActor * InActor, AActor * RealViewer, AActor * ViewTarget, FVector & SrcLocation)>(InActor->Vft[Offsets::IsNetRelevantFor]);
 		FVector Loc = Client->ViewTarget->K2_GetActorLocation();
 		return FnIsNetRelevantFor(InActor, Client->ViewTarget, Client->ViewTarget, Loc);
 	}
 
 	bool IsReplicableActor(AActor* Actor) {
+		if (!Actor || IsBadReadPtr(Actor)) return false;
+		if (Actor->bAlwaysRelevant) return true;
 		if (Actor && Actor->NetDormancy == ENetDormancy::DORM_Initial && Actor->bNetStartup) return false;
-		if (Actor && Actor->Name.ComparisonIndex != 0 && Actor->bReplicates && Actor->RemoteRole != ENetRole::ROLE_None) return true;
+		if (Actor->Name.ComparisonIndex != 0 && Actor->bReplicates && Actor->RemoteRole != ENetRole::ROLE_None) return true;
 		else return false;
 	}
 
 	void ReplicateToClient(AActor* Actor, UNetConnection* Client) {
-		if (!Actor) {
+		if (!Client || IsBadReadPtr(Client) || !Actor || IsBadReadPtr(Actor)) {
 			return;
 		}
-		if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) {
+		if (Actor->IsA(APlayerController::StaticClass()) && Client->PlayerController && Actor != Client->PlayerController) {
 			return;
 		}
 		auto Ch = FindOrGetCh(Client, Actor);
@@ -62,6 +66,7 @@ namespace Replication {
 	void ReplicateActor(AActor* Actor, UNetDriver* NetDriver) {
 		for (int i = 0; i < NetDriver->ClientConnections.Num(); i++) {
 			UNetConnection* Client = NetDriver->ClientConnections[i];
+			if (Client == nullptr || IsBadReadPtr(Client) || !Actor || IsBadReadPtr(Actor)) return;
 			if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) {
 				continue;
 			}
@@ -72,14 +77,8 @@ namespace Replication {
 	}
 
 	std::string GetConnectionName(UNetConnection* Client) {
-		if (!Client) {
+		if (!Client || IsBadReadPtr(Client)) {
 			return "INVALID";
-		}
-		if (Client->PlayerController) {
-			UMcpProfileGroup* MCPPG = reinterpret_cast<AFortPlayerControllerAthena*>(Client->PlayerController)->McpProfileGroup;
-			if (MCPPG) {
-				return MCPPG->PlayerName.ToString();
-			}
 		}
 		return Client->GetName();
 	}
@@ -90,11 +89,11 @@ namespace Replication {
 		if (Connections.Num()) {
 			for (int i = 0; i < Connections.Num(); i++) {
 				UNetConnection* Connection = Connections[i];
-				if (!Connection) {
+				if (!Connection || IsBadReadPtr(Connection)) {
 					continue;
 				}
 				AActor* OwningActor = Connection->OwningActor;
-				if (OwningActor != nullptr) {
+				if (OwningActor != nullptr && Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
 					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->GetViewTarget() : OwningActor);
 				}
 				else {
@@ -113,7 +112,7 @@ namespace Replication {
 			auto Data = WorldActors[i];
 			if (Data) {
 				AActor* Actor = Data;
-				if (IsReplicableActor(Actor)) {
+				if (Actor && !IsBadReadPtr(Actor) && IsReplicableActor(Actor)) {
 					Out.push_back(Actor);
 					FnCallPreReplication(Actor, NetDriver);
 				}
@@ -127,9 +126,10 @@ namespace Replication {
 
 	int ServerReplicateActors_ProcessActors(UNetConnection* Connection, std::vector<AActor*> Actors) {
 		int FinalActors = 0;
-		LOG("Processing " + std::to_string(Actors.size()) + " Actors for Connection " + GetConnectionName(Connection));
+		if (Connection == nullptr || IsBadReadPtr(Connection)) return FinalActors;
+		//LOG("Processing " + std::to_string(Actors.size()) + " Actors for Connection " + GetConnectionName(Connection));
 		for (AActor* Actor : Actors) {
-			if (Actor == nullptr || Connection == nullptr) continue;
+			if (Actor == nullptr || IsBadReadPtr(Actor) || Connection == nullptr || IsBadReadPtr(Connection)) continue;
 			UActorChannel* Ch = FindOrGetCh(Connection, Actor);
 			if (Ch == nullptr) {
 				continue;
@@ -139,7 +139,6 @@ namespace Replication {
 				ReplicateToClient(Actor, Connection);
 			}
 		}
-		Actors.empty();
 		Actors.clear();
 		return FinalActors;
 	}
@@ -151,17 +150,16 @@ namespace Replication {
 		auto ConsiderList = ServerReplicateActors_BuildConsiderList(NetDriver);
 		for (int i = 0; i < NetDriver->ClientConnections.Num(); i++) {
 			UNetConnection* Connection = NetDriver->ClientConnections[i];
-			if (Connection) {
-				if (Connection->ViewTarget) {
-					if (Connection->PlayerController) {
+			if (Connection && !IsBadReadPtr(Connection)) {
+				if (Connection->ViewTarget && !IsBadReadPtr(Connection->ViewTarget)) {
+					if (Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
 						FnClientSendAdjustment(Connection->PlayerController);
 						int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
-						LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
+						//LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
 					}
 				}
 			}
 		}
-		ConsiderList.empty();
 		ConsiderList.clear();
 	}
 }

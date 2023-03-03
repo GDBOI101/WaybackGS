@@ -1,5 +1,10 @@
 #pragma once
 #include "Includes.h"
+
+static UFortResourceItemDefinition* Wood;
+static UFortResourceItemDefinition* Stone;
+static UFortResourceItemDefinition* Metal;
+
 namespace Inventory {
 	//Crashes
 	int GetMaxAmmo(UFortWeaponItemDefinition* ItemDef) {
@@ -114,7 +119,8 @@ namespace Inventory {
 			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.ResetNum();
 		}
 		Update(PC);
-		PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
+		//PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
+		PC->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
 	}
 
 	UFortWorldItem* AddItem(AFortPlayerControllerAthena* PC, UFortItemDefinition* ItemDef, int Count = 1, int Slot = -1, EFortQuickBars Quickbar = EFortQuickBars::Primary) {
@@ -161,8 +167,11 @@ namespace Inventory {
 
 	std::vector<UFortWeaponRangedItemDefinition*> Ammo;
 
-
 	void SetupLoadout() {
+		Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
+		Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
+		Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
+
 		Loadout = {
 			nullptr,//Slot 1
 			nullptr,//Slot 2
@@ -226,9 +235,6 @@ namespace Inventory {
 			if (Weapon) {
 				LootPool.push_back(Weapon);
 			}
-			else {
-				MessageBoxA(0, Item.c_str(), "Test", MB_OK);
-			}
 		}
 
 		for (std::string Item : ConsumablesStr) {
@@ -282,7 +288,7 @@ namespace Inventory {
 		auto WorldInventory = PC->WorldInventory;
 		for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 			auto Item = WorldInventory->Inventory.ItemInstances[i];
-			if (Item->GetItemGuid() == ItemGuid) {
+			if (Item && Item->GetItemGuid() == ItemGuid) {
 				return EquipItem(PC, Item);
 			}
 		}
