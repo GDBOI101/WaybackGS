@@ -41,7 +41,7 @@ namespace Replication {
 	}
 
 	bool IsReplicableActor(AActor* Actor) {
-		if (!Actor || IsBadReadPtr(Actor)) return false;
+		if (!Actor) return false;
 		if (Actor->bAlwaysRelevant) return true;
 		if (Actor && Actor->NetDormancy == ENetDormancy::DORM_Initial && Actor->bNetStartup) return false;
 		if (Actor->Name.ComparisonIndex != 0 && Actor->bReplicates && Actor->RemoteRole != ENetRole::ROLE_None) return true;
@@ -49,7 +49,7 @@ namespace Replication {
 	}
 
 	void ReplicateToClient(AActor* Actor, UNetConnection* Client) {
-		if (!Client || IsBadReadPtr(Client) || !Actor || IsBadReadPtr(Actor)) {
+		if (!Client || !Actor) {
 			return;
 		}
 		if (Actor->IsA(APlayerController::StaticClass()) && Client->PlayerController && Actor != Client->PlayerController) {
@@ -77,7 +77,7 @@ namespace Replication {
 	}
 
 	std::string GetConnectionName(UNetConnection* Client) {
-		if (!Client || IsBadReadPtr(Client)) {
+		if (!Client) {
 			return "INVALID";
 		}
 		return Client->GetName();

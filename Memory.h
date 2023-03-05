@@ -14,11 +14,13 @@ namespace Offsets {
 	int CallPreReplication = 0x1F67370;
 	int KickPlayer = 0x21DCE80;
 	int CreateNetDriver = 0x2503800;
+
 	int SpawnPlayActor = 0x228AEA0;
 	int NCM = 0x2559A80;
 	int NoMcp = 0x634810;
 	int DispatchRequest = 0x3CAEBB0;
 	int GetNetMode = 0x2558380;
+	int GetGSC = 0x21D4390;
 	int HandleReloadCost = 0x971CF0;
 
 	int IsNetRelevantFor = 0x85; //VTable Index

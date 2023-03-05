@@ -87,6 +87,7 @@ void LOG(std::string msg, bool bIsDebug = true) {
 
 static __forceinline bool IsBadReadPtr(void* p)
 {
+	return false;
 	MEMORY_BASIC_INFORMATION mbi;
 	if (VirtualQuery(p, &mbi, sizeof(mbi)))
 	{

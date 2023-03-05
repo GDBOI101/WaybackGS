@@ -41,7 +41,7 @@ namespace Inventory {
 
 	int GetOpenSlot(AFortPlayerControllerAthena* PC) {
 		auto Quickbars = PC->QuickBars;
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < Quickbars->PrimaryQuickBar.Slots.Num(); i++) {
 			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data == nullptr) {
 				return i;
 			}
@@ -269,15 +269,15 @@ namespace Inventory {
 
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
 		if (PC->Pawn && ItemDef) {
-			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->GetItemGuid());
-			if (Weapon && !IsBadReadPtr(Weapon)) {
-				Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
+			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->ItemEntry.ItemGuid);
+			if (Weapon) {
+				/*Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
 				Weapon->ItemEntryGuid = ItemDef->GetItemGuid();
 				Weapon->SetOwner(PC->Pawn);
 				Weapon->OnRep_ReplicatedWeaponData();
 				Weapon->OnRep_AmmoCount();
 				Weapon->ClientGivenTo(PC->Pawn);
-				reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->ClientInternalEquipWeapon(Weapon);
+				reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->ClientInternalEquipWeapon(Weapon);*/
 				return Weapon;
 			}
 		}
@@ -288,7 +288,7 @@ namespace Inventory {
 		auto WorldInventory = PC->WorldInventory;
 		for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 			auto Item = WorldInventory->Inventory.ItemInstances[i];
-			if (Item && Item->GetItemGuid() == ItemGuid) {
+			if (Item && Item->ItemEntry.ItemGuid == ItemGuid) {
 				return EquipItem(PC, Item);
 			}
 		}

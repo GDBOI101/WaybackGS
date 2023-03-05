@@ -36,22 +36,19 @@ void FixPickups(AFortPlayerController* PC) {
 }
 
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
-	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
 	auto Loadout = PC->CustomizationLoadout;
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
 	if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
 	}
+	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
 	std::vector<UCustomCharacterPart*> Ret = Base;
 	if (Loadout.Character) {
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return Ret;
 		}
-		auto ParsedID = CID->GetName().substr(0, 7);
-		ParsedID[0] = 'H';
-		std::string ToFind = "FortHeroType " + ParsedID + "." + ParsedID;
-		auto Hero = UObject::FindObject<UFortHeroType>(ToFind);
+		auto Hero = CID->HeroDefinition;
 		if (!Hero) {
 			return Ret;
 		}
@@ -107,10 +104,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
 		}
-		auto ParsedID = CID->GetName().substr(0, 7);
-		ParsedID[0] = 'H';
-		std::string ToFind = "FortHeroType " + ParsedID + "." + ParsedID;
-		auto Hero = UObject::FindObject<UFortHeroType>(ToFind);
+		auto Hero = CID->HeroDefinition;
 		if (!Hero) {
 			return ApplyDefaultCosmetics(Pawn);
 		}
@@ -141,7 +135,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		}
 	}
 	else {
-		LOG("CustomizationLoadout is invalid!", false);
+		LOG("Loadout Invalid!", false);
 		return ApplyDefaultCosmetics(Pawn);
 	}
 }
@@ -160,6 +154,11 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 }
 
 namespace Hooks {
+	UClass** GetGamesessionClass_Hk(void* a1, UClass** Out) {
+		*Out = AFortGameSessionDedicated::StaticClass();
+		return Out;
+	}
+
 	void (*HandleReloadCost)(AFortWeapon* Weapon, int AmmoToRemove);
 	void HandleReloadCost_Hk(AFortWeapon* Weapon, int AmmoToRemove) {
 		if (!Weapon) {
@@ -220,6 +219,8 @@ namespace Hooks {
 		Replication::ReplicateToClient(PlayerController->PlayerState, Connection);
 		Replication::ReplicateToClient(World->GameState, Connection);
 		auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
+		PlayerState->HeroType = UObject::FindObject<UFortHeroType>("FortHeroType HID_Athena_Outlander_M_001.HID_Athena_Outlander_M_001");
+		PlayerState->OnRep_HeroType();
 		APlayerPawn_Athena_C* Pawn = SpawnPawn();
 		Pawn->bCanBeDamaged = false;
 		Pawn->PlayerState = PlayerState;
@@ -284,16 +285,6 @@ namespace Hooks {
 		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		return PlayerController;
 	}
-
-	void (*NCM)(UWorld* InWorld, UNetConnection* Client, uint8_t MessageType, void* Bunch);
-
-	void NCM_Hk(UWorld* InWorld, UNetConnection* Client, uint8_t MessageType, void* Bunch) {
-		if (MessageType == 15) {
-			return;
-		}
-
-		return NCM(InWorld, Client, MessageType, Bunch);
-	}
 }
 
 namespace Core {
@@ -315,8 +306,6 @@ namespace Core {
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
 		/*uintptr_t SpawnPlayActorAddr = (Base + Offsets::SpawnPlayActor);
 		CreateHook(SpawnPlayActorAddr, Hooks::SpawnPlayActor_Hk, (void**)&Hooks::SpawnPlayActor);*/
-		/*uintptr_t NCMAddr = (Base + Offsets::NCM);
-		CreateHook(NCMAddr, Hooks::NCM_Hk, (void**)&Hooks::NCM);*/
 	}
 
 	void SpawnFloorLoot() {
@@ -344,8 +333,8 @@ namespace Core {
 		}
 	}
 
-	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
-	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
+	double (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
+	double DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
 		*((DWORD*)RequestContent + 0x18) = 3;
 		return DispatchRequestOG(McpProfileGroup, RequestContent);
 	}
@@ -396,6 +385,7 @@ namespace Core {
 			PlayerController->bHasServerFinishedLoading = true;
 			PlayerController->OnRep_bHasServerFinishedLoading();
 			PlayerController->ServerReadyToStartMatch();
+			//reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController);
 			ApplyCosmetics(PlayerController);
 			PlayerState->OnRep_CharacterParts();
 
@@ -413,7 +403,6 @@ namespace Core {
 			PlayerController->WorldInventory = WorldInventory;
 			AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
 			QuickBars->SetOwner(PlayerController);
-			PlayerController->QuickBars = QuickBars;
 			PlayerController->QuickBars = QuickBars;
 			PlayerController->OnRep_QuickBar();
 
@@ -570,16 +559,18 @@ namespace Core {
 		if (FuncName == "ServerExecuteInventoryItem") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ServerExecuteInventoryItem_Params*)Params;
-			if (!PlayerController || !InParams || PlayerController->IsInAircraft()) {
+			if (!PlayerController || !InParams) {
 				return ProcessEventO(Obj, Func, Params);
 			}
 
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-			if (Weapon && !IsBadReadPtr(Weapon)) {
+			if (Weapon) {
 				if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
 					AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
-					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
-					BuildingTool->OnRep_DefaultMetadata();
+					if (Weapon->WeaponData) {
+						BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
+						BuildingTool->OnRep_DefaultMetadata();
+					}
 				}
 			}
 		}
@@ -787,6 +778,7 @@ namespace Core {
 
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
+			reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController);
 			ApplyCosmetics(PlayerController);
 			Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
 			//PlayerController->ServerExecuteInventoryItem(PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
@@ -817,7 +809,7 @@ namespace Core {
 		//Building
 		if (FuncName == "ServerCreateBuildingActor") {
 			auto InParams = (Params::AFortPlayerController_ServerCreateBuildingActor_Params*)(Params);
-			if (InParams && !IsBadReadPtr(InParams)) {
+			if (InParams) {
 				auto Class = InParams->BuildingClassData.BuildingClass;
 				auto Loc = InParams->BuildLoc;
 				auto Rot = InParams->BuildRot;
@@ -898,7 +890,7 @@ namespace Core {
 			static UFortEditToolItemDefinition* EditToolDef = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
 			if (PC && InParams->BuildingActorToEdit) {
 				auto EditTool = Inventory::GetItemInInv(PC, EditToolDef);
-				if (EditTool && !IsBadReadPtr(EditTool)) {
+				if (EditTool) {
 					auto EditToolData = (AFortWeap_EditingTool*)Inventory::EquipItem(PC, EditTool);
 					InParams->BuildingActorToEdit->EditingPlayer = (AFortPlayerStateZone*)PC->PlayerState;
 					InParams->BuildingActorToEdit->OnRep_EditingPlayer();
@@ -942,6 +934,8 @@ namespace Core {
 		CreateHook(Base + Offsets::CollectGarbage, Patch, nullptr);
 		//CreateHook(Base + Offsets::NoMcp, Patch, nullptr);
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
+
+		CreateHook(Base + Offsets::GetGSC, Hooks::GetGamesessionClass_Hk, nullptr);
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
 
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
