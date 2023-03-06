@@ -32,10 +32,6 @@ namespace Inventory {
 		PC->OnRep_QuickBar();
 		QuickBars->OnRep_PrimaryQuickBar();
 		QuickBars->OnRep_SecondaryQuickBar();
-		QuickBars->ForceNetUpdate();
-		PC->ForceUpdateQuickbar(EFortQuickBars::Primary);
-		PC->ForceUpdateQuickbar(EFortQuickBars::Secondary);
-		WorldInventory->ForceNetUpdate();
 		WorldInventory->Inventory.MarkArrayDirty();
 	}
 

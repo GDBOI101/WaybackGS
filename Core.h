@@ -100,6 +100,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		Loadout = Pawn->CustomizationLoadout;
 	}
 	if (Loadout.Character) {
+		Pawn->CustomizationLoadout = Loadout;
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
@@ -154,11 +155,6 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 }
 
 namespace Hooks {
-	UClass** GetGamesessionClass_Hk(void* a1, UClass** Out) {
-		*Out = AFortGameSessionDedicated::StaticClass();
-		return Out;
-	}
-
 	void (*HandleReloadCost)(AFortWeapon* Weapon, int AmmoToRemove);
 	void HandleReloadCost_Hk(AFortWeapon* Weapon, int AmmoToRemove) {
 		if (!Weapon) {
@@ -185,6 +181,7 @@ namespace Hooks {
 		if (!Item->GetName().contains("WID_")) {
 			for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 				if (WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemGuid == Entry.ItemGuid) {
+					HandleReloadCost(Weapon, AmmoToRemove);
 					WorldInventory->Inventory.ItemInstances.RemoveAt(i);
 					break;
 				}
@@ -206,85 +203,6 @@ namespace Hooks {
 		}
 		Inventory::AddItem(PC, AmmoDef, -AmmoToRemove, 0, EFortQuickBars::Secondary);
 	}
-
-	APlayerController* (*SpawnPlayActor)(UWorld* World, UNetConnection* Connection, ENetRole NetRole, FURL InUrl, void* UniqueId, FString& Error, uint8_t InNetPlayerIndex);
-	AFortPlayerControllerAthena* SpawnPlayActor_Hk(UWorld* World, UNetConnection* Connection, ENetRole NetRole, FURL InUrl, void* UniqueId, FString& Error, uint8_t InNetPlayerIndex) {
-		Replication::ServerReplicateActors_ProcessActors(Connection, Replication::ServerReplicateActors_BuildConsiderList(Connection->Driver));
-		AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)SpawnPlayActor(GEngine->GameViewport->World, Connection, NetRole, InUrl, UniqueId, Error, InNetPlayerIndex);
-		Connection->PlayerController = PlayerController;
-		PlayerController->NetConnection = Connection;
-		PlayerController->Player = Connection;
-		Connection->OwningActor = PlayerController;
-		Replication::ReplicateToClient(PlayerController, Connection);
-		Replication::ReplicateToClient(PlayerController->PlayerState, Connection);
-		Replication::ReplicateToClient(World->GameState, Connection);
-		auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
-		PlayerState->HeroType = UObject::FindObject<UFortHeroType>("FortHeroType HID_Athena_Outlander_M_001.HID_Athena_Outlander_M_001");
-		PlayerState->OnRep_HeroType();
-		APlayerPawn_Athena_C* Pawn = SpawnPawn();
-		Pawn->bCanBeDamaged = false;
-		Pawn->PlayerState = PlayerState;
-		Pawn->OnRep_PlayerState();
-		PlayerController->Possess(Pawn);
-		Replication::ReplicateToClient(Pawn, Connection);
-		PlayerController->bClientPawnIsLoaded = true;
-		PlayerController->bReadyToStartMatch = true;
-		PlayerController->bAssignedStartSpawn = true;
-		PlayerController->bHasInitiallySpawned = true;
-		PlayerController->bHasClientFinishedLoading = true;
-		PlayerController->bHasServerFinishedLoading = true;
-		PlayerController->OnRep_bHasServerFinishedLoading();
-		PlayerController->ServerReadyToStartMatch();
-		ApplyCosmetics(PlayerController);
-		PlayerState->OnRep_CharacterParts();
-
-		PlayerState->bHasStartedPlaying = true;
-		PlayerState->bHasFinishedLoading = true;
-		PlayerState->bIsReadyToContinue = true;
-		PlayerState->OnRep_bHasStartedPlaying();
-		PlayerState->bAlwaysRelevant = true;
-
-		//PlayerState->OnRep_PlayerTeam();
-		auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
-		WorldInventory->bAlwaysRelevant = true;
-		WorldInventory->InventoryType = EFortInventoryType::World;
-		WorldInventory->Inventory = FFortItemList();
-		WorldInventory->Inventory.ReplicatedEntries = TArray<struct FFortItemEntry>(6);
-		WorldInventory->Inventory.ItemInstances = TArray<class UFortWorldItem*>(6);
-		WorldInventory->SetOwner(PlayerController);
-		PlayerController->WorldInventory = WorldInventory;
-		AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
-		QuickBars->bAlwaysRelevant = true;
-		QuickBars->SetOwner(PlayerController);
-		PlayerController->QuickBars = QuickBars;
-		PlayerController->QuickBars = QuickBars;
-		PlayerController->OnRep_QuickBar();
-
-		Abilities::GiveBaseAbilities(Pawn);
-
-		FixPickups(PlayerController);
-		Inventory::SetupInventory(PlayerController);
-
-		FixPickups(PlayerController);
-		PlayerController->bHasInitializedWorldInventory = true;
-		Inventory::Update(PlayerController);
-
-		auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
-		HealthSet->CurrentShield.Minimum = 0;
-		HealthSet->CurrentShield.Maximum = 100;
-		HealthSet->CurrentShield.BaseValue = 0;
-		HealthSet->CurrentShield.CurrentValue = 0;
-		HealthSet->Shield.Minimum = 0;
-		HealthSet->Shield.Maximum = 100;
-		HealthSet->Shield.BaseValue = 100;
-		HealthSet->Shield.CurrentValue = 100;
-		HealthSet->OnRep_Shield();
-		HealthSet->OnRep_CurrentShield();
-
-		PlayerController->bInfiniteAmmo = true;
-		PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
-		return PlayerController;
-	}
 }
 
 namespace Core {
@@ -304,8 +222,6 @@ namespace Core {
 		GEngine->GameViewport->World->LevelCollections[1].NetDriver = NetDriver;
 		uintptr_t TickFlushAddr = (Base + Offsets::TickFlush);
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
-		/*uintptr_t SpawnPlayActorAddr = (Base + Offsets::SpawnPlayActor);
-		CreateHook(SpawnPlayActorAddr, Hooks::SpawnPlayActor_Hk, (void**)&Hooks::SpawnPlayActor);*/
 	}
 
 	void SpawnFloorLoot() {
@@ -333,8 +249,8 @@ namespace Core {
 		}
 	}
 
-	double (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
-	double DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
+	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
+	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
 		*((DWORD*)RequestContent + 0x18) = 3;
 		return DispatchRequestOG(McpProfileGroup, RequestContent);
 	}
@@ -385,7 +301,6 @@ namespace Core {
 			PlayerController->bHasServerFinishedLoading = true;
 			PlayerController->OnRep_bHasServerFinishedLoading();
 			PlayerController->ServerReadyToStartMatch();
-			//reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController);
 			ApplyCosmetics(PlayerController);
 			PlayerState->OnRep_CharacterParts();
 
@@ -404,7 +319,6 @@ namespace Core {
 			AFortQuickBars* QuickBars = SpawnActor<AFortQuickBars>({ 0,0,0 }, PlayerController);
 			QuickBars->SetOwner(PlayerController);
 			PlayerController->QuickBars = QuickBars;
-			PlayerController->OnRep_QuickBar();
 
 			Abilities::GiveBaseAbilities(Pawn);
 
@@ -427,7 +341,7 @@ namespace Core {
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
 
-			PlayerController->bInfiniteAmmo = true;
+			//PlayerController->bInfiniteAmmo = true;
 			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		}
 
@@ -564,13 +478,11 @@ namespace Core {
 			}
 
 			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-			if (Weapon) {
-				if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
-					AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
-					if (Weapon->WeaponData) {
-						BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
-						BuildingTool->OnRep_DefaultMetadata();
-					}
+			if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
+				AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
+				if (Weapon->WeaponData) {
+					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
+					BuildingTool->OnRep_DefaultMetadata();
 				}
 			}
 		}
@@ -676,7 +588,7 @@ namespace Core {
 			}
 		}
 
-		//Harvesting (No Work)
+		//Harvesting
 		if (FuncName == "ClientReportDamagedResourceBuilding") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
@@ -699,10 +611,11 @@ namespace Core {
 			if (Obj->IsA(ABuildingSMActor::StaticClass())) {
 				auto BuildingActor = (ABuildingSMActor*)Obj;
 				auto InParams = (Params::ABuildingActor_OnDamageServer_Params*)Params;
-				static UFortWeaponMeleeItemDefinition* PicaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
+				//static UFortWeaponMeleeItemDefinition* PicaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 				if (InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
-					AFortPlayerController* FortController = (AFortPlayerController*)InParams->InstigatedBy;
-					if (FortController && FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PicaxeDef)
+					AFortPlayerControllerAthena* FortController = (AFortPlayerControllerAthena*)InParams->InstigatedBy;
+					UFortWeaponMeleeItemDefinition* PickaxeDef = GetPlayerPickaxe(FortController);
+					if (FortController && FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PickaxeDef)
 						FortController->ClientReportDamagedResourceBuilding(BuildingActor, BuildingActor->ResourceType, 6, BuildingActor->bDestroyed, (InParams->Damage == 100.f));
 				}
 			}
@@ -778,10 +691,10 @@ namespace Core {
 
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
+			//Apply CustomizationLoadout
 			reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController);
 			ApplyCosmetics(PlayerController);
 			Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
-			//PlayerController->ServerExecuteInventoryItem(PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 			PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
 		}
 
@@ -902,7 +815,7 @@ namespace Core {
 		}
 
 		return ProcessEventO(Obj, Func, Params);
-	}
+		}
 
 	void Init() {
 		AllocConsole();
@@ -932,14 +845,16 @@ namespace Core {
 		CreateHook(Base + Offsets::KickPlayer, Patch, nullptr);
 		CreateHook(Base + Offsets::ValidationFailure, Patch, nullptr);
 		CreateHook(Base + Offsets::CollectGarbage, Patch, nullptr);
-		//CreateHook(Base + Offsets::NoMcp, Patch, nullptr);
-		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
 
-		CreateHook(Base + Offsets::GetGSC, Hooks::GetGamesessionClass_Hk, nullptr);
+		//Reloading
+		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
+
+		//Dedi Server
+		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
+		//Fix Profile Query
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
 
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 
-		//CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
 	}
-}
+	}
