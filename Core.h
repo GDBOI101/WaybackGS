@@ -87,7 +87,7 @@ void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
 	static auto Hat = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses");
 	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, Head);
 	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, Body);
-	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, Hat);
+	//((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, Hat);
 }
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
@@ -101,6 +101,7 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 	}
 	if (Loadout.Character) {
 		Pawn->CustomizationLoadout = Loadout;
+		Pawn->OnRep_CustomizationLoadout();
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
@@ -341,7 +342,6 @@ namespace Core {
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
 
-			//PlayerController->bInfiniteAmmo = true;
 			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		}
 
@@ -373,6 +373,9 @@ namespace Core {
 			Inventory::AddItem(PlayerController, SG, 1, 1, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, AR, 1, 2, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, SJ, 1, 3, EFortQuickBars::Primary);
+			for (auto Item : Inventory::Ammo) {
+				Inventory::AddItem(PlayerController, Item, 999, 0, EFortQuickBars::Secondary);
+			}
 
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
@@ -473,12 +476,14 @@ namespace Core {
 		if (FuncName == "ServerExecuteInventoryItem") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ServerExecuteInventoryItem_Params*)Params;
-			if (!PlayerController || !InParams) {
+			if (!PlayerController || !PlayerController->Pawn || reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->IsDead() || !InParams) {
 				return ProcessEventO(Obj, Func, Params);
 			}
 
-			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-			if (Weapon && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
+			Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
+
+			auto Weapon = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->CurrentWeapon;
+			if (Weapon && Weapon->Class && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
 				AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
 				if (Weapon->WeaponData) {
 					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
@@ -666,6 +671,7 @@ namespace Core {
 			return;
 		}
 
+		//Death and Winning Logic
 		if (FuncName == "ClientOnPawnDied") {
 			auto InParams = (Params::AFortPlayerControllerZone_ClientOnPawnDied_Params*)Params;
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
@@ -687,18 +693,19 @@ namespace Core {
 					}
 				}
 			}
+
+			PlayerController->Pawn->K2_DestroyActor();
 		}
 
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
-			//Apply CustomizationLoadout
-			reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController);
+			reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController); //GetOrInitializeHero (Applys the loadout)
 			ApplyCosmetics(PlayerController);
 			Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
 			PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
 		}
 
-		//Only allows owned cosmetics
+		//Only allows equipped cosmetics
 		if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
 			if (!InParams->ChosenCharacterPart) {
@@ -735,21 +742,21 @@ namespace Core {
 					Build->SetMirrored(InParams->bMirrored);
 					Build->InitializeKismetSpawnedBuildingActor(Build, PC);
 					switch (Build->ResourceType) {
-					case EFortResourceType::Wood:
-					{
-						Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
-						break;
-					}
-					case EFortResourceType::Stone:
-					{
-						Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
-						break;
-					}
-					case EFortResourceType::Metal:
-					{
-						Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
-						break;
-					}
+						case EFortResourceType::Wood:
+						{
+							Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
+							break;
+						}
+						case EFortResourceType::Stone:
+						{
+							Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
+							break;
+						}
+						case EFortResourceType::Metal:
+						{
+							Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
+							break;
+						}
 					}
 				}
 			}
@@ -763,7 +770,7 @@ namespace Core {
 				auto Rot = InParams->BuildingActorToEdit->K2_GetActorRotation();
 				auto ForwardVector = InParams->BuildingActorToEdit->GetActorForwardVector();
 				auto RightVector = InParams->BuildingActorToEdit->GetActorRightVector();
-				if (InParams->BuildingActorToEdit->BuildingType != EFortBuildingType::Wall) // Centers building pieces if necessary
+				if (InParams->BuildingActorToEdit->BuildingType != EFortBuildingType::Wall)
 				{
 					switch (InParams->RotationIterations)
 					{
@@ -775,6 +782,7 @@ namespace Core {
 						break;
 					case 3:
 						Loc = Loc + ForwardVector * -256.0f + RightVector * 256.0f;
+						break;
 					}
 				}
 				Rot.Yaw = (round(float((int(Rot.Yaw) + 360) % 360) / 10) * 10) + 90 * InParams->RotationIterations;
@@ -815,7 +823,7 @@ namespace Core {
 		}
 
 		return ProcessEventO(Obj, Func, Params);
-		}
+	}
 
 	void Init() {
 		AllocConsole();
@@ -841,10 +849,12 @@ namespace Core {
 
 		uintptr_t ProcessEventAddr = (Base + Offsets::ProcessEvent);
 		CreateHook(ProcessEventAddr, ProcessEvent_Hk, (void**)&ProcessEventO);
+
+		//Crash & Kick Fixes
 		CreateHook(Base + Offsets::NoReservation, Patch, nullptr);
 		CreateHook(Base + Offsets::KickPlayer, Patch, nullptr);
 		CreateHook(Base + Offsets::ValidationFailure, Patch, nullptr);
-		CreateHook(Base + Offsets::CollectGarbage, Patch, nullptr);
+		CreateHook(Base + Offsets::CollectGarbageInternal, Patch, nullptr);
 
 		//Reloading
 		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
@@ -857,4 +867,4 @@ namespace Core {
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 
 	}
-	}
+}

@@ -22,6 +22,7 @@ namespace Offsets {
 	int GetNetMode = 0x2558380;
 	int GetGSC = 0x21D4390;
 	int HandleReloadCost = 0x971CF0;
+	int CollectGarbageInternal = 0x1406C20;
 
 	int IsNetRelevantFor = 0x85; //VTable Index
 	int ReplicationFrame = 0x288; //int*

@@ -47,7 +47,7 @@ namespace Inventory {
 
 	UFortWorldItem* GetItemInInv(AFortPlayerControllerAthena* PC, UFortItemDefinition* Def) {
 		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++) {
-			if (PC->WorldInventory->Inventory.ItemInstances[i]->GetItemDefinitionBP() == Def) {
+			if (PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemDefinition == Def) {
 				return PC->WorldInventory->Inventory.ItemInstances[i];
 			}
 		}
@@ -115,7 +115,6 @@ namespace Inventory {
 			PC->QuickBars->SecondaryQuickBar.Slots[Slot.second].Items.ResetNum();
 		}
 		Update(PC);
-		//PC->ServerExecuteInventoryItem(PC->QuickBars->PrimaryQuickBar.Slots[0].Items[0]);
 		PC->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
 	}
 
@@ -138,7 +137,7 @@ namespace Inventory {
 		if (Stack) {
 			for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 				auto Item = WorldInventory->Inventory.ItemInstances[i];
-				if (Item->GetItemDefinitionBP() == ItemDef) {
+				if (Item->ItemEntry.ItemDefinition == ItemDef) {
 					WorldInventory->Inventory.ItemInstances.RemoveAt(i);
 					break;
 				}
@@ -155,8 +154,6 @@ namespace Inventory {
 		return Item;
 	}
 
-	std::vector<UFortWeaponRangedItemDefinition*> Loadout{};
-
 	std::vector<UFortWeaponRangedItemDefinition*> LootPool;
 
 	std::vector<UFortWeaponRangedItemDefinition*> Consumables;
@@ -167,15 +164,6 @@ namespace Inventory {
 		Wood = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition WoodItemData.WoodItemData");
 		Stone = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition StoneItemData.StoneItemData");
 		Metal = UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition MetalItemData.MetalItemData");
-
-		Loadout = {
-			nullptr,//Slot 1
-			nullptr,//Slot 2
-			nullptr,//Slot 3
-			nullptr,//Slot 4
-			nullptr,//Slot 5
-			nullptr,//Trap
-		};
 
 		std::vector<std::string> LootPoolStr
 		{
@@ -264,8 +252,8 @@ namespace Inventory {
 	}
 
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
-		if (PC->Pawn && ItemDef) {
-			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP(), ItemDef->ItemEntry.ItemGuid);
+		if (PC->Pawn && ItemDef && ItemDef->ItemEntry.ItemDefinition) {
+			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->ItemEntry.ItemDefinition, ItemDef->ItemEntry.ItemGuid);
 			if (Weapon) {
 				/*Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
 				Weapon->ItemEntryGuid = ItemDef->GetItemGuid();

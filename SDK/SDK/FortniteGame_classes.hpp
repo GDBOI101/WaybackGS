@@ -25701,7 +25701,7 @@ public:
 	uint8                                        Pad_9E0[0x8];                                      // Fixing Size After Last Property  [ Dumper-7 ]
 	UMulticastDelegateProperty_                  OnReticleColorChanged;                             // 0x3C0(0x10)(ZeroConstructor, InstancedReference, BlueprintAssignable, NativeAccessSpecifierPublic)
 	class UFortWeaponItemDefinition*             WeaponData;                                        // 0x3D0(0x8)(BlueprintVisible, BlueprintReadOnly, Net, ZeroConstructor, Transient, IsPlainOldData, RepNotify, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	TArray<struct FFortGameplayAbilityBehaviorDistanceData> GameplayAbilityBehaviorDistanceData;               // 0x3D8(0x10)(BlueprintVisible, BlueprintReadOnly, ZeroConstructor, Transient, NativeAccessSpecifierPublic)
+	TArray<struct FFortGameplayAbilityBehaviorDistanceData> GameplayAbilityBehaviorDistanceData;    // 0x3D8(0x10)(BlueprintVisible, BlueprintReadOnly, ZeroConstructor, Transient, NativeAccessSpecifierPublic)
 	uint8                                        EquippedWeaponDestroyWrapperRepCounter;            // 0x3E8(0x1)(Net, ZeroConstructor, IsPlainOldData, RepNotify, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	bool                                         bShouldDrawNativeReticle;                          // 0x3E9(0x1)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, Protected, HasGetValueTypeHash, NativeAccessSpecifierProtected)
 	uint8                                        Pad_9E1[0x6];                                      // Fixing Size After Last Property  [ Dumper-7 ]
