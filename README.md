@@ -14,3 +14,6 @@ Harvesting
 Floor Loot
 <br>
 Chest Loot
+<br>
+Skins from Locker
+<br>
