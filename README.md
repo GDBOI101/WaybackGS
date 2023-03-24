@@ -15,5 +15,6 @@ Floor Loot
 <br>
 Chest Loot
 <br>
-Skins from Locker
+Skins/Pickaxe from Locker
 <br>
+LateGame
