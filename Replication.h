@@ -10,9 +10,7 @@ namespace Replication {
 	void(__fastcall* FnCallPreReplication)(AActor* Actor, UNetDriver* NetDriver);
 
 	UActorChannel* FindOrGetCh(UNetConnection* Client, AActor* Actor) {
-		if (Client == nullptr || IsBadReadPtr(Client)) {
-			return nullptr;
-		}
+		if (Client == nullptr || IsBadReadPtr(Client)) return nullptr;
 		//Find an existing channel
 		for (int i = 0; i < Client->OpenChannels.Num(); i++) {
 			UChannel* Ch = Client->OpenChannels[i];
@@ -49,16 +47,10 @@ namespace Replication {
 	}
 
 	void ReplicateToClient(AActor* Actor, UNetConnection* Client) {
-		if (!Client || !Actor) {
-			return;
-		}
-		if (Actor->IsA(APlayerController::StaticClass()) && Client->PlayerController && Actor != Client->PlayerController) {
-			return;
-		}
+		if (!Client || !Actor) return;
+		if (Actor->IsA(APlayerController::StaticClass()) && Client->PlayerController && Actor != Client->PlayerController) return;
 		auto Ch = FindOrGetCh(Client, Actor);
-		if (!Ch) {
-			return;
-		}
+		if (!Ch) return;
 		FnCallPreReplication(Actor, Client->Driver);
 		FnReplicateActor(Ch);
 	}
@@ -67,12 +59,8 @@ namespace Replication {
 		for (int i = 0; i < NetDriver->ClientConnections.Num(); i++) {
 			UNetConnection* Client = NetDriver->ClientConnections[i];
 			if (Client == nullptr || IsBadReadPtr(Client) || !Actor || IsBadReadPtr(Actor)) return;
-			if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) {
-				continue;
-			}
-			if (Client) {
-				ReplicateToClient(Actor, Client);
-			}
+			if (Actor->IsA(APlayerController::StaticClass()) && Actor != Client->PlayerController) continue;
+			if (Client) ReplicateToClient(Actor, Client);
 		}
 	}
 
@@ -89,9 +77,7 @@ namespace Replication {
 		if (Connections.Num()) {
 			for (int i = 0; i < Connections.Num(); i++) {
 				UNetConnection* Connection = Connections[i];
-				if (!Connection || IsBadReadPtr(Connection)) {
-					continue;
-				}
+				if (!Connection || IsBadReadPtr(Connection)) continue;
 				AActor* OwningActor = Connection->OwningActor;
 				if (OwningActor != nullptr && Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
 					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->GetViewTarget() : OwningActor);
@@ -131,9 +117,7 @@ namespace Replication {
 		for (AActor* Actor : Actors) {
 			if (Actor == nullptr || IsBadReadPtr(Actor) || Connection == nullptr || IsBadReadPtr(Connection)) continue;
 			UActorChannel* Ch = FindOrGetCh(Connection, Actor);
-			if (Ch == nullptr) {
-				continue;
-			}
+			if (Ch == nullptr) continue;
 			else {
 				FinalActors++;
 				ReplicateToClient(Actor, Connection);

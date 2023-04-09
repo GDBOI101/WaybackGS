@@ -15,9 +15,7 @@ namespace Inventory {
 				static UDataTableFunctionLibrary* TableFuncLib = UObject::FindObjectFast<UDataTableFunctionLibrary>("Default__DataTableFunctionLibrary");
 				FFortBaseWeaponStats* Out = {};
 				TableFuncLib->GetDataTableRowFromName(DataTable, Stats.RowName, Out);
-				if (Out) {
-					return Out->ClipSize;
-				}
+				if (Out) return Out->ClipSize;
 			}
 		}
 		return 0;
@@ -38,27 +36,21 @@ namespace Inventory {
 	int GetOpenSlot(AFortPlayerControllerAthena* PC) {
 		auto Quickbars = PC->QuickBars;
 		for (int i = 0; i < Quickbars->PrimaryQuickBar.Slots.Num(); i++) {
-			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data == nullptr) {
-				return i;
-			}
+			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data == nullptr) return i;
 		}
 		return -1;
 	}
 
 	UFortWorldItem* GetItemInInv(AFortPlayerControllerAthena* PC, UFortItemDefinition* Def) {
 		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++) {
-			if (PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemDefinition == Def) {
-				return PC->WorldInventory->Inventory.ItemInstances[i];
-			}
+			if (PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemDefinition == Def) return PC->WorldInventory->Inventory.ItemInstances[i];
 		}
 		return nullptr;
 	}
 
 	FFortItemEntry GetEntryInInv(AFortPlayerControllerAthena* PC, FGuid GUID) {
 		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
-			if (PC->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) {
-				return PC->WorldInventory->Inventory.ReplicatedEntries[i];
-			}
+			if (PC->WorldInventory->Inventory.ReplicatedEntries[i].ItemGuid == GUID) return PC->WorldInventory->Inventory.ReplicatedEntries[i];
 		}
 		return {};
 	}
@@ -66,14 +58,10 @@ namespace Inventory {
 	std::pair<EFortQuickBars, int> GetItemSlot(AFortPlayerControllerAthena* PC, FGuid GUID) {
 		auto Quickbars = PC->QuickBars;
 		for (int i = 0; i < Quickbars->PrimaryQuickBar.Slots.Num(); i++) {
-			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data && Quickbars->PrimaryQuickBar.Slots[i].Items[0] == GUID) {
-				return std::make_pair(EFortQuickBars::Primary, i);
-			}
+			if (Quickbars->PrimaryQuickBar.Slots[i].Items.Data && Quickbars->PrimaryQuickBar.Slots[i].Items[0] == GUID) return std::make_pair(EFortQuickBars::Primary, i);
 		}
 		for (int i = 0; i < Quickbars->SecondaryQuickBar.Slots.Num(); i++) {
-			if (Quickbars->SecondaryQuickBar.Slots[i].Items.Data && Quickbars->SecondaryQuickBar.Slots[i].Items[0] == GUID) {
-				return std::make_pair(EFortQuickBars::Secondary, i);
-			}
+			if (Quickbars->SecondaryQuickBar.Slots[i].Items.Data && Quickbars->SecondaryQuickBar.Slots[i].Items[0] == GUID) return std::make_pair(EFortQuickBars::Secondary, i);
 		}
 		return std::make_pair(EFortQuickBars::Max_None, -1);
 	}
@@ -254,16 +242,17 @@ namespace Inventory {
 	AFortWeapon* EquipItem(AFortPlayerControllerAthena* PC, UFortWorldItem* ItemDef) {
 		if (PC->Pawn && ItemDef && ItemDef->ItemEntry.ItemDefinition) {
 			AFortWeapon* Weapon = reinterpret_cast<AFortPlayerPawn*>(PC->Pawn)->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemDef->ItemEntry.ItemDefinition, ItemDef->ItemEntry.ItemGuid);
-			if (Weapon) {
-				/*Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
-				Weapon->ItemEntryGuid = ItemDef->GetItemGuid();
-				Weapon->SetOwner(PC->Pawn);
-				Weapon->OnRep_ReplicatedWeaponData();
-				Weapon->OnRep_AmmoCount();
-				Weapon->ClientGivenTo(PC->Pawn);
-				reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->ClientInternalEquipWeapon(Weapon);*/
-				return Weapon;
-			}
+			if (Weapon) return Weapon;
+			/*
+			OLD SOURCE, DON'T KNOW IF IT WORKS (COMMENT BY CTRLKOHL)
+			Weapon->WeaponData = (UFortWeaponItemDefinition*)ItemDef->GetItemDefinitionBP();
+			Weapon->ItemEntryGuid = ItemDef->GetItemGuid();
+			Weapon->SetOwner(PC->Pawn);
+			Weapon->OnRep_ReplicatedWeaponData();
+			Weapon->OnRep_AmmoCount();
+			Weapon->ClientGivenTo(PC->Pawn);
+			reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->ClientInternalEquipWeapon(Weapon);*/
+				
 		}
 		return nullptr;
 	}
@@ -272,9 +261,7 @@ namespace Inventory {
 		auto WorldInventory = PC->WorldInventory;
 		for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
 			auto Item = WorldInventory->Inventory.ItemInstances[i];
-			if (Item && Item->ItemEntry.ItemGuid == ItemGuid) {
-				return EquipItem(PC, Item);
-			}
+			if (Item && Item->ItemEntry.ItemGuid == ItemGuid) return EquipItem(PC, Item);
 		}
 
 		return nullptr;

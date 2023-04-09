@@ -33,11 +33,7 @@ namespace Abilities {
 		for (int i = 0; i < Specs.Num(); i++)
 		{
 			auto& Spec = Specs[i];
-
-			if (Spec.Handle.Handle == Handle.Handle)
-			{
-				return &Spec;
-			}
+			if (Spec.Handle.Handle == Handle.Handle) return &Spec;
 		}
 
 		return nullptr;

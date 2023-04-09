@@ -29,50 +29,36 @@ APlayerPawn_Athena_C* SpawnPawn(FVector SpawnLoc = GetSpawnLoc()) {
 
 void FixPickups(AFortPlayerController* PC) {
 	PC->OverriddenBackpackSize = 5;
-	if (PC->CheatManager) {
-		//Idk if this is needed
-		((UFortCheatManager*)PC->CheatManager)->BackpackSetSize(5);
-	}
+	if (PC->CheatManager) ((UFortCheatManager*)PC->CheatManager)->BackpackSetSize(5);
 }
 
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
 	auto Loadout = PC->CustomizationLoadout;
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
-	if (!Loadout.Character) {
-		Loadout = Pawn->CustomizationLoadout;
-	}
+	if (!Loadout.Character) Loadout = Pawn->CustomizationLoadout;
 	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
 	std::vector<UCustomCharacterPart*> Ret = Base;
 	if (Loadout.Character) {
 		auto CID = Loadout.Character;
-		if (!CID) {
-			return Ret;
-		}
 		auto Hero = CID->HeroDefinition;
-		if (!Hero) {
-			return Ret;
-		}
 		auto Specializations = Hero->Specializations;
-		if (!Specializations.Data) {
-			return Ret;
-		}
+		if (!CID) return Ret;
+		if (!Hero) return Ret;
+		if (!Specializations.Data) return Ret;
+
 		for (int i = 0; i < Specializations.Num(); i++) {
 			auto SpecializationName = Specializations[i].ObjectID.AssetPathName.ToString();
 			auto Specialization = LoadObject<UFortHeroSpecialization>(UFortHeroSpecialization::StaticClass(), std::wstring(SpecializationName.begin(), SpecializationName.end()).c_str());
-			if (!Specialization) {
-				continue;
-			}
+			if (!Specialization) continue;
+
 			auto Parts = Specialization->CharacterParts;
-			if (!Parts.Data) {
-				continue;
-			}
+			if (!Parts.Data) continue;
+
 
 			for (int x = 0; x < Parts.Num(); x++) {
 				auto PartName = Parts[x].ObjectID.AssetPathName.ToString();
 				auto Part = LoadObject<UCustomCharacterPart>(UCustomCharacterPart::StaticClass(), std::wstring(PartName.begin(), PartName.end()).c_str());
-				if (!Part) {
-					continue;
-				}
+				if (!Part) continue;
 				Ret.push_back(Part);
 			}
 		}
@@ -92,46 +78,34 @@ void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
-	if (!Pawn) {
-		return;
-	}
 	auto Loadout = PC->CustomizationLoadout;
-	if (!Loadout.Character) {
-		Loadout = Pawn->CustomizationLoadout;
-	}
+	if (!Pawn) return;
+	if (!Loadout.Character) Loadout = Pawn->CustomizationLoadout;
+
 	if (Loadout.Character) {
 		Pawn->CustomizationLoadout = Loadout;
 		Pawn->OnRep_CustomizationLoadout();
 		auto CID = Loadout.Character;
-		if (!CID) {
-			return ApplyDefaultCosmetics(Pawn);
-		}
 		auto Hero = CID->HeroDefinition;
-		if (!Hero) {
-			return ApplyDefaultCosmetics(Pawn);
-		}
 		auto Specializations = Hero->Specializations;
-		if (!Specializations.Data) {
-			return ApplyDefaultCosmetics(Pawn);
-		}
+		if (!CID) return ApplyDefaultCosmetics(Pawn);
+		
+		if (!Hero) return ApplyDefaultCosmetics(Pawn);
+		
+		if (!Specializations.Data) return ApplyDefaultCosmetics(Pawn);
+
 		for (int i = 0; i < Specializations.Num(); i++) {
 			auto SpecializationName = Specializations[i].ObjectID.AssetPathName.ToString();
 			auto Specialization = LoadObject<UFortHeroSpecialization>(UFortHeroSpecialization::StaticClass(), std::wstring(SpecializationName.begin(), SpecializationName.end()).c_str());
-			if (!Specialization) {
-				continue;
-			}
+			if (!Specialization) continue;
 			auto Parts = Specialization->CharacterParts;
-			if (!Parts.Data) {
-				continue;
-			}
+			if (!Parts.Data) continue;
 
 			for (int x = 0; x < Parts.Num(); x++) {
 				auto PartName = Parts[x].ObjectID.AssetPathName.ToString();
 				auto Part = LoadObject<UCustomCharacterPart>(UCustomCharacterPart::StaticClass(), std::wstring(PartName.begin(), PartName.end()).c_str());
 
-				if (!Part) {
-					continue;
-				}
+				if (!Part) continue;
 				Pawn->ServerChoosePart(Part->CharacterPartType, Part);
 			}
 		}
@@ -146,38 +120,25 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 	static auto DefaultPickaxe = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 	auto Pickaxe = DefaultPickaxe;
 	auto Loadout = PC->CustomizationLoadout;
-	if (!Loadout.Character) {
-		Loadout = reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->CustomizationLoadout;
-	}
-	if (Loadout.Pickaxe) {
-		Pickaxe = Loadout.Pickaxe->WeaponDefinition;
-	}
+	if (!Loadout.Character) Loadout = reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn)->CustomizationLoadout;
+	if (Loadout.Pickaxe) Pickaxe = Loadout.Pickaxe->WeaponDefinition;
 	return Pickaxe;
 }
 
 namespace Hooks {
 	void (*HandleReloadCost)(AFortWeapon* Weapon, int AmmoToRemove);
 	void HandleReloadCost_Hk(AFortWeapon* Weapon, int AmmoToRemove) {
-		if (!Weapon) {
-			return;
-		}
 		auto Pawn = (AFortPlayerPawnAthena*)Weapon->GetOwner();
-		if (!Pawn)
-		{
-			return;
-		}
 		auto PC = (AFortPlayerControllerAthena*)Pawn->Controller;
-		if (!PC) {
-			return;
-		}
+		if (!Weapon) return;
+		if (!Pawn) return;
+		if (!PC) return;
+
 		FFortItemEntry Entry = Inventory::GetEntryInInv(PC, Weapon->ItemEntryGuid);
-		if (!Entry.ItemDefinition) {
-			return;
-		}
 		auto Item = (UFortWorldItemDefinition*)Weapon->WeaponData;
-		if (!Item) {
-			return;
-		}
+		if (!Entry.ItemDefinition) return;
+		if (!Item) return;
+			
 		auto WorldInventory = PC->WorldInventory;
 		if (!Item->GetName().contains("WID_")) {
 			for (int i = 0; i < WorldInventory->Inventory.ItemInstances.Num(); i++) {
@@ -199,9 +160,7 @@ namespace Hooks {
 		Entry.LoadedAmmo = Weapon->AmmoCount;
 		WorldInventory->Inventory.MarkItemDirty(Entry);
 		auto AmmoDef = Item->GetAmmoWorldItemDefinition_BP();
-		if (!AmmoDef) {
-			return;
-		}
+		if (!AmmoDef) return;
 		Inventory::AddItem(PC, AmmoDef, -AmmoToRemove, 0, EFortQuickBars::Secondary);
 	}
 }
@@ -234,9 +193,7 @@ namespace Core {
 			FVector Location = Actor->K2_GetActorLocation();
 
 			auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-			while (!ItemDef) {
-				ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-			}
+			while (!ItemDef) ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
 			UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
 			Item->ItemEntry.Count = 1;
 			Inventory::SpawnPickup(Item, Location);
@@ -497,9 +454,7 @@ namespace Core {
 			auto InParams = (Params::AFortPlayerPawn_ServerHandlePickup_Params*)Params;
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Pawn->Controller;
 
-			if (!InParams->Pickup || !InParams->Pickup->PrimaryPickupItemEntry.ItemDefinition) {
-				return ProcessEventO(Obj, Func, Params);
-			}
+			if (!InParams->Pickup || !InParams->Pickup->PrimaryPickupItemEntry.ItemDefinition) return ProcessEventO(Obj, Func, Params);
 
 			auto ItemEntry = InParams->Pickup->PrimaryPickupItemEntry;
 
@@ -517,7 +472,6 @@ namespace Core {
 		if (FuncName == "ServerSpawnInventoryDrop") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ServerSpawnInventoryDrop_Params*)Params;
-
 			Inventory::DropItem(PlayerController, InParams->ItemGuid);
 		}
 
@@ -534,9 +488,7 @@ namespace Core {
 					Actor->K2_DestroyActor();
 					for (int i = 0; i < 3; i++) {
 						auto ItemDef = (UFortWeaponItemDefinition*)Inventory::Ammo[rand() % (Inventory::Ammo.size())];
-						while (!ItemDef) {
-							ItemDef = Inventory::Ammo[rand() % (Inventory::Ammo.size())];
-						}
+						while (!ItemDef) ItemDef = Inventory::Ammo[rand() % (Inventory::Ammo.size())];
 						int Count = (ItemDef->DropCount * 3);
 						UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 1);
 						Item->ItemEntry.Count = Count;
@@ -549,9 +501,7 @@ namespace Core {
 					FVector Location = Actor->K2_GetActorLocation();
 					Actor->K2_DestroyActor();
 					auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-					while (!ItemDef) {
-						ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-					}
+					while (!ItemDef) ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
 					UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
 					Item->ItemEntry.Count = 1;
 					Inventory::SpawnPickup(Item, Location);
@@ -598,18 +548,11 @@ namespace Core {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
 			UFortResourceItemDefinition* ItemDef = nullptr;
-			if (InParams->PotentialResourceType == EFortResourceType::Wood)
-				ItemDef = Wood;
+			if (InParams->PotentialResourceType == EFortResourceType::Wood) ItemDef = Wood;
+			if (InParams->PotentialResourceType == EFortResourceType::Stone) ItemDef = Stone;
+			if (InParams->PotentialResourceType == EFortResourceType::Metal) ItemDef = Metal;
 
-			if (InParams->PotentialResourceType == EFortResourceType::Stone)
-				ItemDef = Stone;
-
-			if (InParams->PotentialResourceType == EFortResourceType::Metal)
-				ItemDef = Metal;
-
-			if (ItemDef != nullptr) {
-				Inventory::AddItem(PlayerController, ItemDef, InParams->PotentialResourceCount, 0, EFortQuickBars::Secondary);
-			}
+			if (ItemDef != nullptr) Inventory::AddItem(PlayerController, ItemDef, InParams->PotentialResourceCount, 0, EFortQuickBars::Secondary);
 		}
 
 		if (FuncName == "OnDamageServer") {
@@ -667,9 +610,7 @@ namespace Core {
 #endif
 
 		//Misc
-		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll" || FuncName == "ServerPlayEmoteItem") {
-			return;
-		}
+		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll" || FuncName == "ServerPlayEmoteItem") return;
 
 		//Death and Winning Logic
 		if (FuncName == "ClientOnPawnDied") {
@@ -680,9 +621,7 @@ namespace Core {
 			auto Pickaxe = PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0];
 			for (int i = 0; i < PlayerController->WorldInventory->Inventory.ItemInstances.Num(); i++) {
 				auto Item = PlayerController->WorldInventory->Inventory.ItemInstances[i];
-				if (Item && Item->GetItemGuid() != Pickaxe) {
-					Inventory::DropItem(PlayerController, Item->GetItemGuid());
-				}
+				if (Item && Item->GetItemGuid() != Pickaxe) Inventory::DropItem(PlayerController, Item->GetItemGuid());
 			}
 			if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft < 2) {
 				if (InParams->DeathReport.KillerPawn) {
@@ -708,9 +647,7 @@ namespace Core {
 		//Only allows equipped cosmetics
 		if (FuncName == "ServerChoosePart") {
 			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
-			if (!InParams->ChosenCharacterPart) {
-				return;
-			}
+			if (!InParams->ChosenCharacterPart) return;
 			else {
 				auto Pawn = reinterpret_cast<AFortPlayerPawnAthena*>(Obj);
 				bool Allowed = false;
@@ -720,9 +657,7 @@ namespace Core {
 						break;
 					}
 				}
-				if (!Allowed) {
-					return;
-				}
+				if (!Allowed) return;
 			}
 		}
 
