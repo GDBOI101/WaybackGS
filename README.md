@@ -1,7 +1,9 @@
 # Wayback GS
 A Gameserver for Fortnite Version 1.9.1
+<br>
+Currently Super Buggy + Some stuff is pasted
 # Features
-Fixed SDK
+Fixed SDK (Credit: Milxnor)
 <br>
 Backpack full fix
 <br>
@@ -9,12 +11,15 @@ Server Sided Build Previews (Credit: Ender & Milxnor)
 <br>
 Proper Listening (No Beacons)
 <br>
-Harvesting
+Harvesting (Credit: UWS)
 <br>
-Floor Loot
+Floor Loot (Credit: JGS)
 <br>
 Chest Loot
 <br>
 Skins/Pickaxe from Locker
 <br>
-LateGame
+LateGame (Credit: MagmaDev)
+
+# Other Credits
+Sulfur, JGS, and UWS: Inspiration + A bunch of stuff here and there throughout the project (used and unused)
