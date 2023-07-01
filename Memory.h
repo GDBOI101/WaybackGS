@@ -14,6 +14,7 @@ namespace Offsets {
 	int CallPreReplication = 0x1F67370;
 	int KickPlayer = 0x21DCE80;
 	int CreateNetDriver = 0x2503800;
+	int ApplyHomebaseEffectsOnPlayerSetup = 0x5A45E0;
 
 	int SpawnPlayActor = 0x228AEA0;
 	int NCM = 0x2559A80;

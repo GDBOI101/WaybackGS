@@ -236,14 +236,21 @@ namespace Inventory {
 		}
 	}
 
+	static UFortBuildingItemDefinition* Wall;
+	static UFortBuildingItemDefinition* Floor;
+	static UFortBuildingItemDefinition* Stair;
+	static UFortBuildingItemDefinition* Roof;
+
 	void SetupInventory(AFortPlayerControllerAthena* PC) {
 		auto WorldInventory = PC->WorldInventory;
 		auto Quickbars = PC->QuickBars;
 		static auto EditTool = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
-		static auto Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
-		static auto Floor = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor");
-		static auto Stair = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W");
-		static auto Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");
+		if (!Wall || !Floor || !Stair || !Roof) {
+			Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
+			Floor = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Floor.BuildingItemData_Floor");
+			Stair = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Stair_W.BuildingItemData_Stair_W");
+			Roof = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_RoofS.BuildingItemData_RoofS");
+		}
 		AddItem(PC, EditTool, 1, 0, EFortQuickBars::Primary);
 		AddItem(PC, Wall, 1, 0, EFortQuickBars::Secondary);
 		AddItem(PC, Floor, 1, 1, EFortQuickBars::Secondary);

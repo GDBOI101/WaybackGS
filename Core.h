@@ -84,7 +84,7 @@ std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* P
 void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
 	static auto Head = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH");
 	static auto Body = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body");
-	static auto Hat = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses");
+	//static auto Hat = UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses");
 	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Head, Head);
 	((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Body, Body);
 	//((AFortPlayerPawnAthena*)Pawn)->ServerChoosePart(EFortCustomPartType::Hat, Hat);
@@ -100,8 +100,8 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		Loadout = Pawn->CustomizationLoadout;
 	}
 	if (Loadout.Character) {
-		Pawn->CustomizationLoadout = Loadout;
-		Pawn->OnRep_CustomizationLoadout();
+		//Pawn->CustomizationLoadout = Loadout;
+		//Pawn->OnRep_CustomizationLoadout();
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
@@ -256,6 +256,19 @@ namespace Core {
 		return DispatchRequestOG(McpProfileGroup, RequestContent);
 	}
 
+	void (*ApplyHomebaseEffectsOnPlayerSetupOG)(AFortGameState* GameState, __int64 a2, __int64 a3, APlayerController* PlayerController, UFortHero* Hero, char a6, unsigned __int8 a7);
+	//Idk if PlayerController is actually a Player Controller but oh well
+	void ApplyHomebaseEffectsOnPlayerSetup_Hk(AFortGameState* GameState, __int64 a2, __int64 a3, APlayerController* PlayerController, UFortHero* Hero, char a6, unsigned __int8 a7) {
+		if (!Hero) {
+			return ApplyHomebaseEffectsOnPlayerSetupOG(GameState, a2, a3, PlayerController, Hero, a6, a7);
+		}
+		else {
+			static UFortHeroType* HeroType = UObject::FindObject<UFortHeroType>("FortHeroType HID_001_Athena_Commando_F.HID_001_Athena_Commando_F");
+			Hero->ItemDefinition = HeroType;
+			return ApplyHomebaseEffectsOnPlayerSetupOG(GameState, a2, a3, PlayerController, Hero, a6, a7);
+		}
+	}
+
 	void (*ProcessEventO)(UObject* Obj, UFunction* Func, void* Params);
 	void ProcessEvent_Hk(UObject* Obj, UFunction* Func, void* Params) {
 		std::string FuncName = Func->GetName();
@@ -290,25 +303,14 @@ namespace Core {
 			auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
 			APlayerPawn_Athena_C* Pawn = SpawnPawn();
 			Pawn->bCanBeDamaged = false;
-			Pawn->PlayerState = PlayerState;
-			Pawn->OnRep_PlayerState();
 			PlayerController->Possess(Pawn);
 			Replication::ReplicateToClient(Pawn, Connection);
-			PlayerController->bClientPawnIsLoaded = true;
-			PlayerController->bReadyToStartMatch = true;
-			PlayerController->bAssignedStartSpawn = true;
-			PlayerController->bHasInitiallySpawned = true;
 			PlayerController->bHasClientFinishedLoading = true;
 			PlayerController->bHasServerFinishedLoading = true;
 			PlayerController->OnRep_bHasServerFinishedLoading();
 			PlayerController->ServerReadyToStartMatch();
 			ApplyCosmetics(PlayerController);
 			PlayerState->OnRep_CharacterParts();
-
-			PlayerState->bHasStartedPlaying = true;
-			PlayerState->bHasFinishedLoading = true;
-			PlayerState->bIsReadyToContinue = true;
-			PlayerState->OnRep_bHasStartedPlaying();
 
 			auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
 			WorldInventory->InventoryType = EFortInventoryType::World;
@@ -408,68 +410,76 @@ namespace Core {
 		if (FuncName == "ServerTryActivateAbility") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerTryActivateAbility_Params*)Params;
+			if (InParams) {
+				FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
+				FPredictionKey PredictionKey = InParams->PredictionKey;
 
-			FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
-			FPredictionKey PredictionKey = InParams->PredictionKey;
+				static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
 
-			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+				auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
+				if (Spec) {
+					Spec->InputPressed = true;
 
-			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
-			Spec->InputPressed = true;
+					UGameplayAbility* InstancedAbility = nullptr;
+					FGameplayEventData* TriggerEventData = nullptr;
 
-			UGameplayAbility* InstancedAbility = nullptr;
-			FGameplayEventData* TriggerEventData = nullptr;
+					if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
+						ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
+						return;
+					}
 
-			if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
-				return;
+					reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
+				}
 			}
-
-			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 
 		if (FuncName == "ServerTryActivateAbilityWithEventData") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerTryActivateAbilityWithEventData_Params*)Params;
+			if (InParams) {
+				FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
+				FPredictionKey PredictionKey = InParams->PredictionKey;
 
-			FGameplayAbilitySpecHandle AbilityToActivate = InParams->AbilityToActivate;
-			FPredictionKey PredictionKey = InParams->PredictionKey;
+				static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
 
-			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+				auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
+				if (Spec) {
+					Spec->InputPressed = true;
 
-			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, AbilityToActivate);
-			Spec->InputPressed = true;
+					UGameplayAbility* InstancedAbility = nullptr;
+					FGameplayEventData* TriggerEventData = nullptr;
 
-			UGameplayAbility* InstancedAbility = nullptr;
-			FGameplayEventData* TriggerEventData = nullptr;
+					if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, &InParams->TriggerEventData)) {
+						ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
+						return;
+					}
 
-			if (!InternalTryActivateAbility(ASC, AbilityToActivate, PredictionKey, &InstancedAbility, nullptr, &InParams->TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(AbilityToActivate, PredictionKey.Current);
-				return;
+					reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
+				}
 			}
-
-			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 
 		if (FuncName == "ServerAbilityRPCBatch") {
 			UAbilitySystemComponent* ASC = (UAbilitySystemComponent*)Obj;
 			auto InParams = (Params::UAbilitySystemComponent_ServerAbilityRPCBatch_Params*)Params;
+			if (InParams) {
+				static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
 
-			static auto InternalTryActivateAbility = reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility * *OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData * TriggerEventData)>(Base + Offsets::InternalTryActivateAbility);
+				auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, InParams->BatchInfo.AbilitySpecHandle);
+				if (Spec) {
+					Spec->InputPressed = true;
 
-			auto Spec = Abilities::FindAbilitySpecFromHandle(ASC, InParams->BatchInfo.AbilitySpecHandle);
-			Spec->InputPressed = true;
+					UGameplayAbility* InstancedAbility = nullptr;
+					FGameplayEventData* TriggerEventData = nullptr;
 
-			UGameplayAbility* InstancedAbility = nullptr;
-			FGameplayEventData* TriggerEventData = nullptr;
+					if (!InternalTryActivateAbility(ASC, InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
+						ASC->ClientActivateAbilityFailed(InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey.Current);
+						return;
+					}
 
-
-			if (!InternalTryActivateAbility(ASC, InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey, &InstancedAbility, nullptr, TriggerEventData)) {
-				ASC->ClientActivateAbilityFailed(InParams->BatchInfo.AbilitySpecHandle, InParams->BatchInfo.PredictionKey.Current);
-				return;
+					reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
+				}
 			}
-
-			reinterpret_cast<bool(*)(UAbilitySystemComponent * ASC, FGameplayAbilitySpec & Spec)>(Base + Offsets::MarkAbilitySpecDirty)(ASC, *Spec);
 		}
 
 		//Inventory
@@ -480,14 +490,35 @@ namespace Core {
 				return ProcessEventO(Obj, Func, Params);
 			}
 
-			Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
-
-			auto Weapon = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->CurrentWeapon;
+			auto Weapon = Inventory::EquipInventoryItem(PlayerController, InParams->ItemGuid);
 			if (Weapon && Weapon->Class && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
 				AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
 				if (Weapon->WeaponData) {
-					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
-					BuildingTool->OnRep_DefaultMetadata();
+					UBuildingEditModeMetadata* MetaData = nullptr;
+					if (Weapon->WeaponData == Inventory::Roof)
+					{
+						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Roof EMP_Roof_RoofC.EMP_Roof_RoofC");
+						MetaData = MD;
+					}
+					else if (Weapon->WeaponData == Inventory::Stair)
+					{
+						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Stair EMP_Stair_StairW.EMP_Stair_StairW");
+						MetaData = MD;
+					}
+					else if (Weapon->WeaponData == Inventory::Wall)
+					{
+						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Wall EMP_Wall_Solid.EMP_Wall_Solid");
+						MetaData = MD;
+					}
+					else if (Weapon->WeaponData == Inventory::Floor)
+					{
+						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Floor EMP_Floor_Floor.EMP_Floor_Floor");
+						MetaData = MD;
+					}
+					if (MetaData) {
+						BuildingTool->DefaultMetadata = MetaData;
+						BuildingTool->OnRep_DefaultMetadata();
+					}
 				}
 			}
 		}
@@ -495,120 +526,127 @@ namespace Core {
 		if (FuncName == "ServerHandlePickup") {
 			auto Pawn = (AFortPlayerPawn*)Obj;
 			auto InParams = (Params::AFortPlayerPawn_ServerHandlePickup_Params*)Params;
-			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Pawn->Controller;
+			if (InParams) {
+				AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Pawn->Controller;
 
-			if (!InParams->Pickup || !InParams->Pickup->PrimaryPickupItemEntry.ItemDefinition) {
-				return ProcessEventO(Obj, Func, Params);
+				if (!InParams->Pickup || !InParams->Pickup->PrimaryPickupItemEntry.ItemDefinition) {
+					return ProcessEventO(Obj, Func, Params);
+				}
+
+				auto ItemEntry = InParams->Pickup->PrimaryPickupItemEntry;
+
+				EFortQuickBars QB = ((ItemEntry.ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) || ItemEntry.ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass())) ? EFortQuickBars::Secondary : EFortQuickBars::Primary);
+
+				if (QB == EFortQuickBars::Primary && Inventory::GetOpenSlot(PlayerController) == -1) {
+					return;
+				}
+
+				InParams->Pickup->K2_DestroyActor();
+
+				Inventory::AddItem(PlayerController, ItemEntry.ItemDefinition, ItemEntry.Count, -1, QB);
 			}
-
-			auto ItemEntry = InParams->Pickup->PrimaryPickupItemEntry;
-
-			EFortQuickBars QB = ((ItemEntry.ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) || ItemEntry.ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass())) ? EFortQuickBars::Secondary : EFortQuickBars::Primary);
-
-			if (QB == EFortQuickBars::Primary && Inventory::GetOpenSlot(PlayerController) == -1) {
-				return;
-			}
-
-			InParams->Pickup->K2_DestroyActor();
-
-			Inventory::AddItem(PlayerController, ItemEntry.ItemDefinition, ItemEntry.Count, -1, QB);
 		}
 
 		if (FuncName == "ServerSpawnInventoryDrop") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ServerSpawnInventoryDrop_Params*)Params;
-
-			Inventory::DropItem(PlayerController, InParams->ItemGuid);
+			if (InParams) {
+				Inventory::DropItem(PlayerController, InParams->ItemGuid);
+			}
 		}
 
 		//Interacting
 		if (FuncName == "ServerAttemptInteract") {
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ServerAttemptInteract_Params*)Params;
-
-			auto Actor = InParams->ReceivingActor;
-			if (Actor) {
-				auto ClassName = Actor->Class->GetName();
-				if (ClassName.contains("Tiered_Short_Ammo")) {
-					FVector Location = Actor->K2_GetActorLocation();
-					Actor->K2_DestroyActor();
-					for (int i = 0; i < 3; i++) {
-						auto ItemDef = (UFortWeaponItemDefinition*)Inventory::Ammo[rand() % (Inventory::Ammo.size())];
-						while (!ItemDef) {
-							ItemDef = Inventory::Ammo[rand() % (Inventory::Ammo.size())];
+			if (InParams) {
+				auto Actor = InParams->ReceivingActor;
+				if (Actor) {
+					auto ClassName = Actor->Class->GetName();
+					if (ClassName.contains("Tiered_Short_Ammo")) {
+						FVector Location = Actor->K2_GetActorLocation();
+						Actor->K2_DestroyActor();
+						for (int i = 0; i < 3; i++) {
+							auto ItemDef = (UFortWeaponItemDefinition*)Inventory::Ammo[rand() % (Inventory::Ammo.size())];
+							while (!ItemDef) {
+								ItemDef = Inventory::Ammo[rand() % (Inventory::Ammo.size())];
+							}
+							int Count = (ItemDef->DropCount * 3);
+							UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 1);
+							Item->ItemEntry.Count = Count;
+							Inventory::SpawnPickup(Item, Location);
 						}
-						int Count = (ItemDef->DropCount * 3);
-						UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 1);
-						Item->ItemEntry.Count = Count;
+						return;
+					}
+
+					if (ClassName.contains("Tiered_Chest")) {
+						FVector Location = Actor->K2_GetActorLocation();
+						Actor->K2_DestroyActor();
+						auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
+						while (!ItemDef) {
+							ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
+						}
+						UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
+						Item->ItemEntry.Count = 1;
 						Inventory::SpawnPickup(Item, Location);
+
+						int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
+						UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
+						Ammo->ItemEntry.Count = ACount;
+						Inventory::SpawnPickup(Ammo, Location);
+
+						UFortWeaponRangedItemDefinition* ItemDef2 = Inventory::Consumables[rand() % (Inventory::Consumables.size())];
+						int Count = (ItemDef2->MaxStackSize / 2);
+
+						UFortWorldItem* Item2 = (UFortWorldItem*)ItemDef2->CreateTemporaryItemInstanceBP(Count, 1);
+						Item2->ItemEntry.Count = Count;
+						Inventory::SpawnPickup(Item2, Location);
+						return;
 					}
-					return;
-				}
 
-				if (ClassName.contains("Tiered_Chest")) {
-					FVector Location = Actor->K2_GetActorLocation();
-					Actor->K2_DestroyActor();
-					auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-					while (!ItemDef) {
-						ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
+					if (ClassName.contains("AthenaSupplyDrop_02")) {
+						FVector Location = Actor->K2_GetActorLocation();
+						Actor->K2_DestroyActor();
+						static auto ItemDef = UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_AMR_Athena_SR_Ore_T03.WID_Sniper_AMR_Athena_SR_Ore_T03");
+						UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
+						Item->ItemEntry.Count = 1;
+						Inventory::SpawnPickup(Item, Location);
+
+						int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
+						UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
+						Ammo->ItemEntry.Count = ACount;
+						Inventory::SpawnPickup(Ammo, Location);
+
+						UFortWeaponRangedItemDefinition* ItemDef2 = Inventory::Consumables[rand() % (Inventory::Consumables.size())];
+						int Count = (ItemDef2->MaxStackSize / 2);
+
+						UFortWorldItem* Item2 = (UFortWorldItem*)ItemDef2->CreateTemporaryItemInstanceBP(Count, 1);
+						Item2->ItemEntry.Count = Count;
+						Inventory::SpawnPickup(Item2, Location);
 					}
-					UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
-					Item->ItemEntry.Count = 1;
-					Inventory::SpawnPickup(Item, Location);
-
-					int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
-					UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
-					Ammo->ItemEntry.Count = ACount;
-					Inventory::SpawnPickup(Ammo, Location);
-
-					UFortWeaponRangedItemDefinition* ItemDef2 = Inventory::Consumables[rand() % (Inventory::Consumables.size())];
-					int Count = (ItemDef2->MaxStackSize / 2);
-
-					UFortWorldItem* Item2 = (UFortWorldItem*)ItemDef2->CreateTemporaryItemInstanceBP(Count, 1);
-					Item2->ItemEntry.Count = Count;
-					Inventory::SpawnPickup(Item2, Location);
-					return;
-				}
-
-				if (ClassName.contains("AthenaSupplyDrop_02")) {
-					FVector Location = Actor->K2_GetActorLocation();
-					Actor->K2_DestroyActor();
-					static auto ItemDef = UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_AMR_Athena_SR_Ore_T03.WID_Sniper_AMR_Athena_SR_Ore_T03");
-					UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
-					Item->ItemEntry.Count = 1;
-					Inventory::SpawnPickup(Item, Location);
-
-					int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
-					UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
-					Ammo->ItemEntry.Count = ACount;
-					Inventory::SpawnPickup(Ammo, Location);
-
-					UFortWeaponRangedItemDefinition* ItemDef2 = Inventory::Consumables[rand() % (Inventory::Consumables.size())];
-					int Count = (ItemDef2->MaxStackSize / 2);
-
-					UFortWorldItem* Item2 = (UFortWorldItem*)ItemDef2->CreateTemporaryItemInstanceBP(Count, 1);
-					Item2->ItemEntry.Count = Count;
-					Inventory::SpawnPickup(Item2, Location);
 				}
 			}
 		}
 
 		//Harvesting
 		if (FuncName == "ClientReportDamagedResourceBuilding") {
-			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
-			UFortResourceItemDefinition* ItemDef = nullptr;
-			if (InParams->PotentialResourceType == EFortResourceType::Wood)
-				ItemDef = Wood;
+			if (InParams) {
+				AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
+				
+				UFortResourceItemDefinition* ItemDef = nullptr;
+				if (InParams->PotentialResourceType == EFortResourceType::Wood)
+					ItemDef = Wood;
 
-			if (InParams->PotentialResourceType == EFortResourceType::Stone)
-				ItemDef = Stone;
+				if (InParams->PotentialResourceType == EFortResourceType::Stone)
+					ItemDef = Stone;
 
-			if (InParams->PotentialResourceType == EFortResourceType::Metal)
-				ItemDef = Metal;
+				if (InParams->PotentialResourceType == EFortResourceType::Metal)
+					ItemDef = Metal;
 
-			if (ItemDef != nullptr) {
-				Inventory::AddItem(PlayerController, ItemDef, InParams->PotentialResourceCount, 0, EFortQuickBars::Secondary);
+				if (ItemDef != nullptr) {
+					Inventory::AddItem(PlayerController, ItemDef, InParams->PotentialResourceCount, 0, EFortQuickBars::Secondary);
+				}
 			}
 		}
 
@@ -617,7 +655,7 @@ namespace Core {
 				auto BuildingActor = (ABuildingSMActor*)Obj;
 				auto InParams = (Params::ABuildingActor_OnDamageServer_Params*)Params;
 				//static UFortWeaponMeleeItemDefinition* PicaxeDef = UObject::FindObject<UFortWeaponMeleeItemDefinition>("FortWeaponMeleeItemDefinition WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
-				if (InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
+				if (InParams && InParams->InstigatedBy && InParams->InstigatedBy->IsA(AFortPlayerController::StaticClass()) && !BuildingActor->bPlayerPlaced) {
 					AFortPlayerControllerAthena* FortController = (AFortPlayerControllerAthena*)InParams->InstigatedBy;
 					UFortWeaponMeleeItemDefinition* PickaxeDef = GetPlayerPickaxe(FortController);
 					if (FortController && FortController->MyFortPawn && FortController->MyFortPawn->CurrentWeapon && FortController->MyFortPawn->CurrentWeapon->WeaponData == PickaxeDef)
@@ -856,6 +894,9 @@ namespace Core {
 		CreateHook(Base + Offsets::ValidationFailure, Patch, nullptr);
 		CreateHook(Base + Offsets::CollectGarbageInternal, Patch, nullptr);
 
+		//Health and Shield Fix (Credit: RebootV3)
+		CreateHook(Base + Offsets::ApplyHomebaseEffectsOnPlayerSetup, ApplyHomebaseEffectsOnPlayerSetup_Hk, (void**)&ApplyHomebaseEffectsOnPlayerSetupOG);
+
 		//Reloading
 		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
 
@@ -863,7 +904,7 @@ namespace Core {
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
 		//Fix Profile Query
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
-
+		//God Fix :)
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 
 	}
