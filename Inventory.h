@@ -241,6 +241,15 @@ namespace Inventory {
 	static UFortBuildingItemDefinition* Stair;
 	static UFortBuildingItemDefinition* Roof;
 
+	bool IsConsumable(UFortWeaponItemDefinition* MyItem) {
+		for (UFortWeaponRangedItemDefinition* Item : Consumables) {
+			if (Item == MyItem) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void SetupInventory(AFortPlayerControllerAthena* PC) {
 		auto WorldInventory = PC->WorldInventory;
 		auto Quickbars = PC->QuickBars;

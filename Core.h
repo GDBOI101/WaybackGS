@@ -155,6 +155,242 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 	return Pickaxe;
 }
 
+//Skunky Hardcoded AI (Not working)
+namespace AI {
+	enum class EWeaponType : uint8_t {
+		Pickaxe,
+		Light,
+		Medium,
+		Shotgun,
+		Heavy,
+		Rocket,
+		Other,
+		None
+	};
+
+	class AFortAIPlayer {
+	public:
+		//Config Vars
+		AAthena_PlayerController_C* MyPC;
+		UAthenaCharacterItemDefinition* Skin;
+		UFortWeaponMeleeItemDefinition* Pickaxe;
+		APawn* TargetPlayerPawn = nullptr;
+		//Temp Inventory Mapping
+		std::vector<UFortWeaponItemDefinition*> Items = {
+			{nullptr}, //Slot 0 Pickaxe
+			{nullptr}, //Slot 1 (SMG/Pistol)
+			{nullptr}, //Slot 2 (AR/Pistol)
+			{nullptr}, //Slot 3 (Shotgun)
+			{nullptr}, //Slot 4 (Explosive/Sniper)
+			{nullptr}  //Slot 5 (Heals) 
+		};
+		int LAmmo = 100; //Light
+		int MAmmo = 100; //Medium
+		int SAmmo = 100; //Shotgun
+		int HAmmo = 100; //Heavy
+		int RAmmo = 100; //Rocket
+		int HCount = 100; //Healing
+		bool bTick = false;
+
+		int CurrentSlot = 0;
+
+		AFortPlayerPawnAthena* GetAIPawn() {
+			AFortPlayerPawnAthena* MyPawn = (AFortPlayerPawnAthena*)MyPC->Pawn;
+			if (!MyPawn) {
+				bTick = false;
+				return nullptr;
+			}
+			return MyPawn;
+		}
+
+		EWeaponType GetWeaponType() {
+			auto CurrentItem = Items[CurrentSlot];
+			if (!CurrentItem) {
+				return EWeaponType::None;
+			}
+			else if (CurrentSlot == 0) {
+				return EWeaponType::Pickaxe;
+			}
+			else if (CurrentSlot == 5 || Inventory::IsConsumable(CurrentItem)) {
+				return EWeaponType::Other;
+			}
+			else {
+				auto AmmoType = CurrentItem->GetAmmoWorldItemDefinition_BP();
+				if (AmmoType == Inventory::Ammo[0]) {
+					return EWeaponType::Rocket;
+				}
+				else if (AmmoType == Inventory::Ammo[1]) {
+					return EWeaponType::Shotgun;
+				}
+				else if (AmmoType == Inventory::Ammo[2]) {
+					return EWeaponType::Medium;
+				}
+				else if (AmmoType == Inventory::Ammo[3]) {
+					return EWeaponType::Light;
+				}
+				else if (AmmoType == Inventory::Ammo[4]) {
+					return EWeaponType::Heavy;
+				}
+				else {
+					return EWeaponType::None;
+				}
+			}
+		}
+
+		void EquipItem(UFortWeaponItemDefinition* Weapon) {
+			auto MyPawn = GetAIPawn();
+			if (bTick) {
+				MyPawn->EquipWeaponDefinition(Weapon, {});
+			}
+		}
+
+		void Reload(EWeaponType Type) {
+			int y = sizeof(AFortAIPlayer);
+		}
+
+		bool HandlePreShot() {
+			if (bTick) {
+				EWeaponType Type = GetWeaponType();
+				bool bNeedsReload = false;
+				if (Type == EWeaponType::Pickaxe) {
+					return true;
+				}
+				if (Type == EWeaponType::Light) {
+					if (LAmmo > 0) {
+						LAmmo--;
+					}
+					else {
+						bNeedsReload = true;
+					}
+				}
+				else if (Type == EWeaponType::Medium) {
+					if (MAmmo > 0) {
+						MAmmo--;
+					}
+					else {
+						bNeedsReload = true;
+					}
+				}
+				else if (Type == EWeaponType::Shotgun) {
+					if (SAmmo > 0) {
+						SAmmo--;
+					}
+					else {
+						bNeedsReload = true;
+					}
+				}
+				else if (Type == EWeaponType::Heavy) {
+					if (HAmmo > 0) {
+						HAmmo--;
+					}
+					else {
+						bNeedsReload = true;
+					}
+				}
+				else if (Type == EWeaponType::Rocket) {
+					if (RAmmo > 0) {
+						RAmmo--;
+					}
+					else {
+						bNeedsReload = true;
+					}
+				}
+				else if (Type == EWeaponType::Other) {
+					if (HCount > 0) {
+						HCount--;
+					}
+					else {
+						return false;
+					}
+				}
+				if (!bNeedsReload) {
+					return true;
+				}
+				else {
+					Reload(Type);
+				}
+			}
+			return false;
+		}
+
+		void Shoot() {
+			auto MyPawn = GetAIPawn();
+			if (bTick && HandlePreShot()) {
+				MyPawn->PawnStartFire(0);
+				Sleep(2000);
+			}
+		}
+
+		static void Tick(AFortAIPlayer* Player) {
+			static auto MathLib = (UKismetMathLibrary*)UObject::FindObjectFast<UKismetMathLibrary>("Default__KismetMathLibrary");
+			while (true) {
+				Sleep(1000 / 30);
+				if (Player->bTick) {
+					auto MyPawn = Player->GetAIPawn();
+					if (Player->bTick && Player->TargetPlayerPawn) {
+						FVector loc = MathLib->Subtract_VectorVector(
+							Player->TargetPlayerPawn->K2_GetActorLocation(),
+							MyPawn->K2_GetActorLocation());
+						MyPawn->AddMovementInput(loc, 1, true);
+						FRotator rot = MathLib->Conv_VectorToRotator(loc);
+						Player->MyPC->ControlRotation = rot;
+						rot.Pitch = 0;
+						MyPawn->K2_SetActorRotation(rot, false);
+						MyPawn->CurrentMovementStyle = EFortMovementStyle::Sprinting;
+						Player->Shoot();
+					}
+				}
+				else {
+					return;
+				}
+			}
+		}
+
+		static AFortAIPlayer* CreateBot(FVector Pos, FString InPlayerName) {
+			static UFortHeroType* DefHeroType = UObject::FindObject<UFortHeroType>("FortHeroType HID_001_Athena_Commando_F.HID_001_Athena_Commando_F");
+			APlayerPawn_Generic_C* Pawn = SpawnActor<APlayerPawn_Generic_C>(Pos, nullptr);
+			if (Pawn) {
+				Pawn->bCanBeDamaged = false;
+				//Pawn is valid continue spawning
+				AAthena_PlayerController_C* PC = SpawnActor<AAthena_PlayerController_C>(Pos, nullptr);
+				PC->Player = (UPlayer*)GGameplayStatics->SpawnObject(UPlayer::StaticClass(), PC);
+				PC->Player->PlayerController = PC;
+				PC->Possess(Pawn);
+				Pawn->PawnUniqueID = (rand() % 100);
+				Pawn->OnRep_PawnUniqueID();
+				AFortPlayerStateAthena* PS = SpawnActor<AFortPlayerStateAthena>(Pos, PC);
+				Pawn->PlayerState = PS;
+				Pawn->OnRep_PlayerState();
+				PC->PlayerState = PS;
+				PC->OnRep_PlayerState();
+				PC->ServerChangeName(InPlayerName);
+				PS->HeroType = DefHeroType;
+				PS->OnRep_HeroType();
+				Pawn->SetMaxHealth(100.0f);
+				Pawn->SetHealth(100.0f);
+				Pawn->CurrentMovementStyle = SDK::EFortMovementStyle::Sprinting;
+				PS->bIsSpectator = false;
+				PS->bIsABot = true;
+				PS->bHasFinishedLoading = true;
+				PS->bHasStartedPlaying = true;
+				PS->OnRep_bHasStartedPlaying();
+				ApplyDefaultCosmetics((AFortPlayerPawnAthena*)Pawn);
+				PS->OnRep_CharacterParts();
+				AFortAIPlayer* Ret = {};
+				Ret->MyPC = PC;
+				Ret->Items[2] = Inventory::LootPool[0];
+				Ret->CurrentSlot = 2;
+				Ret->bTick = true;
+				return Ret;
+			}
+			else {
+				MessageBoxA(0, "Bot no work", "Ratio", MB_OK);
+				return nullptr;
+			}
+		}
+	};
+}
+
 namespace Hooks {
 	void (*HandleReloadCost)(AFortWeapon* Weapon, int AmmoToRemove);
 	void HandleReloadCost_Hk(AFortWeapon* Weapon, int AmmoToRemove) {
@@ -309,7 +545,7 @@ namespace Core {
 			PlayerController->bHasServerFinishedLoading = true;
 			PlayerController->OnRep_bHasServerFinishedLoading();
 			PlayerController->ServerReadyToStartMatch();
-			ApplyCosmetics(PlayerController);
+			ApplyDefaultCosmetics(Pawn);
 			PlayerState->OnRep_CharacterParts();
 
 			auto WorldInventory = SpawnActor<AFortInventory>({ 0,0,0 }, PlayerController);
@@ -332,7 +568,7 @@ namespace Core {
 			PlayerController->bHasInitializedWorldInventory = true;
 			Inventory::Update(PlayerController);
 
-			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
+			/*auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
 			HealthSet->CurrentShield.BaseValue = 0;
@@ -342,7 +578,7 @@ namespace Core {
 			HealthSet->Shield.BaseValue = 100;
 			HealthSet->Shield.CurrentValue = 100;
 			HealthSet->OnRep_Shield();
-			HealthSet->OnRep_CurrentShield();
+			HealthSet->OnRep_CurrentShield();*/
 
 			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
 		}
@@ -494,31 +730,8 @@ namespace Core {
 			if (Weapon && Weapon->Class && Weapon->IsA(AFortWeap_BuildingTool::StaticClass())) {
 				AFortWeap_BuildingTool* BuildingTool = reinterpret_cast<AFortWeap_BuildingTool*>(Weapon);
 				if (Weapon->WeaponData) {
-					UBuildingEditModeMetadata* MetaData = nullptr;
-					if (Weapon->WeaponData == Inventory::Roof)
-					{
-						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Roof EMP_Roof_RoofC.EMP_Roof_RoofC");
-						MetaData = MD;
-					}
-					else if (Weapon->WeaponData == Inventory::Stair)
-					{
-						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Stair EMP_Stair_StairW.EMP_Stair_StairW");
-						MetaData = MD;
-					}
-					else if (Weapon->WeaponData == Inventory::Wall)
-					{
-						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Wall EMP_Wall_Solid.EMP_Wall_Solid");
-						MetaData = MD;
-					}
-					else if (Weapon->WeaponData == Inventory::Floor)
-					{
-						static auto MD = UObject::FindObject<UBuildingEditModeMetadata>("BuildingEditModeMetadata_Floor EMP_Floor_Floor.EMP_Floor_Floor");
-						MetaData = MD;
-					}
-					if (MetaData) {
-						BuildingTool->DefaultMetadata = MetaData;
-						BuildingTool->OnRep_DefaultMetadata();
-					}
+					BuildingTool->DefaultMetadata = reinterpret_cast<UFortBuildingItemDefinition*>(Weapon->WeaponData)->BuildingMetaData.Get();
+					BuildingTool->OnRep_DefaultMetadata();
 				}
 			}
 		}
@@ -633,7 +846,7 @@ namespace Core {
 			auto InParams = (Params::AFortPlayerController_ClientReportDamagedResourceBuilding_Params*)Params;
 			if (InParams) {
 				AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
-				
+
 				UFortResourceItemDefinition* ItemDef = nullptr;
 				if (InParams->PotentialResourceType == EFortResourceType::Wood)
 					ItemDef = Wood;
@@ -722,9 +935,14 @@ namespace Core {
 					Inventory::DropItem(PlayerController, Item->GetItemGuid());
 				}
 			}
-			if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft < 2) {
-				if (InParams->DeathReport.KillerPawn) {
-					auto KPC = (AFortPlayerControllerAthena*)InParams->DeathReport.KillerPawn->Controller;
+			if (InParams->DeathReport.KillerPawn) {
+				auto KPP = InParams->DeathReport.KillerPawn;
+				auto KPC = (AFortPlayerControllerAthena*)KPP->Controller;
+
+				PlayerController->PlayerToSpectateOnDeath = KPP;
+				PlayerController->SpectateOnDeath();
+
+				if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft < 2) {
 					if (KPC) {
 						KPC->ClientNotifyWon();
 						KPC->PlayWinEffects();
@@ -737,10 +955,17 @@ namespace Core {
 
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
-			reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController); //GetOrInitializeHero (Applys the loadout)
-			ApplyCosmetics(PlayerController);
-			Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
-			PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
+			if (!PlayerController->PlayerState->bIsABot) {
+				reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController); //GetOrInitializeHero (Applys the loadout)
+				ApplyCosmetics(PlayerController);
+				Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
+				PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
+				/*
+				auto AITest = AI::AFortAIPlayer::CreateBot(PlayerController->Pawn->K2_GetActorLocation() + FVector{ 500,0,0 }, L"TestPlayer1");
+				AITest->TargetPlayerPawn = PlayerController->Pawn;
+				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)AI::AFortAIPlayer::Tick, AITest, 0, 0);
+				*/
+			}
 		}
 
 		//Only allows equipped cosmetics
@@ -751,15 +976,17 @@ namespace Core {
 			}
 			else {
 				auto Pawn = reinterpret_cast<AFortPlayerPawnAthena*>(Obj);
-				bool Allowed = false;
-				for (auto Part : GetPlayerParts(reinterpret_cast<AFortPlayerControllerAthena*>(Pawn->Controller))) {
-					if (InParams->ChosenCharacterPart == Part) {
-						Allowed = true;
-						break;
+				if (!Pawn->PlayerState->bIsABot) {
+					bool Allowed = false;
+					for (auto Part : GetPlayerParts(reinterpret_cast<AFortPlayerControllerAthena*>(Pawn->Controller))) {
+						if (InParams->ChosenCharacterPart == Part) {
+							Allowed = true;
+							break;
+						}
 					}
-				}
-				if (!Allowed) {
-					return;
+					if (!Allowed) {
+						return;
+					}
 				}
 			}
 		}
@@ -780,21 +1007,21 @@ namespace Core {
 					Build->SetMirrored(InParams->bMirrored);
 					Build->InitializeKismetSpawnedBuildingActor(Build, PC);
 					switch (Build->ResourceType) {
-						case EFortResourceType::Wood:
-						{
-							Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
-							break;
-						}
-						case EFortResourceType::Stone:
-						{
-							Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
-							break;
-						}
-						case EFortResourceType::Metal:
-						{
-							Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
-							break;
-						}
+					case EFortResourceType::Wood:
+					{
+						Inventory::AddItem(PC, Wood, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
+					case EFortResourceType::Stone:
+					{
+						Inventory::AddItem(PC, Stone, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
+					case EFortResourceType::Metal:
+					{
+						Inventory::AddItem(PC, Metal, -10, 0, EFortQuickBars::Secondary);
+						break;
+					}
 					}
 				}
 			}
