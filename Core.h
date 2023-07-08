@@ -442,6 +442,12 @@ namespace Hooks {
 	}
 }
 
+void SpectateFix(AFortPlayerControllerAthena* PC) {
+	Sleep(3000);
+	PC->SpectateOnDeath();
+	return;
+}
+
 namespace Core {
 	static FVector SZLoc;
 	void StartServer() {
@@ -940,7 +946,7 @@ namespace Core {
 				auto KPC = (AFortPlayerControllerAthena*)KPP->Controller;
 
 				PlayerController->PlayerToSpectateOnDeath = KPP;
-				PlayerController->SpectateOnDeath();
+				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)SpectateFix, PlayerController, 0, 0);
 
 				if (reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft < 2) {
 					if (KPC) {
@@ -950,7 +956,7 @@ namespace Core {
 				}
 			}
 
-			PlayerController->Pawn->K2_DestroyActor();
+			//PlayerController->Pawn->K2_DestroyActor();
 		}
 
 		if (FuncName == "ServerLoadingScreenDropped") {
