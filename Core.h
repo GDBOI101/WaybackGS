@@ -1135,8 +1135,10 @@ namespace Core {
 
 		//Dedi Server
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
+
 		//Fix Profile Query
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
+
 		//God Fix :)
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 
