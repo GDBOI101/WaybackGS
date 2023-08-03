@@ -937,7 +937,7 @@ namespace Core {
 			auto Pickaxe = PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0];
 			for (int i = 0; i < PlayerController->WorldInventory->Inventory.ItemInstances.Num(); i++) {
 				auto Item = PlayerController->WorldInventory->Inventory.ItemInstances[i];
-				if (Item && Item->GetItemGuid() != Pickaxe && Item->IsA(UFortBuildingItemDefinition::StaticClass())) {
+				if (Item && Item->GetItemGuid() != Pickaxe && !Item->IsA(UFortBuildingItemDefinition::StaticClass()) && !Item->IsA(UFortEditToolItemDefinition::StaticClass())) {
 					Inventory::DropItem(PlayerController, Item->GetItemGuid());
 				}
 			}
