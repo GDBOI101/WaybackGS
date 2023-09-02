@@ -155,7 +155,7 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 	return Pickaxe;
 }
 
-//Skunky Hardcoded AI (Not working)
+//Skunky Hardcoded AI (Not working) (Skidded Poalris Lmao)
 namespace AI {
 	enum class EWeaponType : uint8_t {
 		Pickaxe,
@@ -906,7 +906,11 @@ namespace Core {
 			static bool Set = false;
 			if (!Set) {
 				Set = true;
-				SZLoc = FVector(GetRandomFoundation()->K2_GetActorLocation() + FVector{ 0,0,10000 });
+				auto POI = GetRandomFoundation();
+				while (!POI) {
+					POI = GetRandomFoundation();
+				}
+				SZLoc = FVector(POI->K2_GetActorLocation() + FVector{ 0,0,10000 });
 				AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(Obj);
 				AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GM->GameState);
 				auto AC = GS->GetAircraft();

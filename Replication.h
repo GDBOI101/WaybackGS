@@ -167,8 +167,14 @@ namespace Replication {
 namespace Hooks {
 	void (*TickFlushO)(UNetDriver* NetDriver, float DeltaSeconds);
 	void TickFlush_Hk(UNetDriver* NetDriver, float DeltaSeconds) {
+		static bool bStarted = false;
+		if (!bStarted && GetAsyncKeyState(VK_F3) & 0x1) {
+			bStarted = true;
+			AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->AuthorityGameMode->GameState);
+			GS->WarmupCountdownEndTime = 0.0f;
+		}
+
 		if (NetDriver->ClientConnections.Num() > 0 && NetDriver->ClientConnections[0]->InternalAck == false) {
-			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Replication::ServerReplicateActors, NetDriver, 0, 0);
 			Replication::ServerReplicateActors(NetDriver);
 		}
 		return TickFlushO(NetDriver, DeltaSeconds);
