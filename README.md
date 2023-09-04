@@ -21,5 +21,8 @@ Skins/Pickaxe from Locker
 <br>
 LateGame (Credit: MagmaDev)
 
-# Other Credits
+## Other Credits
 Sulfur, JGS, and UWS: Inspiration + A bunch of stuff here and there throughout the project (used and unused)
+
+# Issues
+Game Crashes without MCP (LawinV2 and Dedi Server requests would fix)
