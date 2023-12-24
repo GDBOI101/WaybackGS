@@ -492,12 +492,6 @@ namespace Core {
 		}
 	}
 
-	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
-	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
-		*((DWORD*)RequestContent + 0x18) = 3;
-		return DispatchRequestOG(McpProfileGroup, RequestContent);
-	}
-
 	void (*ApplyHomebaseEffectsOnPlayerSetupOG)(AFortGameState* GameState, __int64 a2, __int64 a3, APlayerController* PlayerController, UFortHero* Hero, char a6, unsigned __int8 a7);
 	//Idk if PlayerController is actually a Player Controller but oh well
 	void ApplyHomebaseEffectsOnPlayerSetup_Hk(AFortGameState* GameState, __int64 a2, __int64 a3, APlayerController* PlayerController, UFortHero* Hero, char a6, unsigned __int8 a7) {
@@ -1139,11 +1133,5 @@ namespace Core {
 
 		//Dedi Server
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
-
-		//Fix Profile Query
-		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
-
-		//God Fix :)
-		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
 	}
 }
