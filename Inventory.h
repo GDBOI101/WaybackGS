@@ -28,7 +28,6 @@ namespace Inventory {
 		auto QuickBars = PC->QuickBars;
 		WorldInventory->HandleInventoryLocalUpdate();
 		PC->HandleWorldInventoryLocalUpdate();
-		WorldInventory->bRequiresLocalUpdate = true;
 		PC->OnRep_QuickBar();
 		QuickBars->OnRep_PrimaryQuickBar();
 		QuickBars->OnRep_SecondaryQuickBar();
@@ -146,7 +145,6 @@ namespace Inventory {
 
 		UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 1);
 		Item->SetOwningControllerForTemporaryItem(PC);
-		Item->ItemEntry.Count = Count;
 		WorldInventory->Inventory.ReplicatedEntries.Add(Item->ItemEntry);
 		WorldInventory->Inventory.ItemInstances.Add(Item);
 		Quickbars->ServerAddItemInternal(Item->GetItemGuid(), Quickbar, Slot);

@@ -35,15 +35,18 @@ void FixPickups(AFortPlayerController* PC) {
 	}
 }
 
+bool IsValidLoadout(FFortAthenaLoadout Loadout) {
+	if (Loadout.Character && Loadout.Glider && Loadout.Pickaxe) return true;
+	return false;
+}
+
+static std::vector<UCustomCharacterPart*> BaseParts;
+
 std::vector<UCustomCharacterPart*> GetPlayerParts(AFortPlayerControllerAthena* PC) {
 	auto Loadout = PC->CustomizationLoadout;
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
-	if (!Loadout.Character) {
-		Loadout = Pawn->CustomizationLoadout;
-	}
-	static std::vector<UCustomCharacterPart*> Base = { UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body") , UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses") };
-	std::vector<UCustomCharacterPart*> Ret = Base;
-	if (Loadout.Character) {
+	std::vector<UCustomCharacterPart*> Ret = BaseParts;
+	if (IsValidLoadout(Loadout)) {
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return Ret;
@@ -96,12 +99,12 @@ void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
 		return;
 	}
 	auto Loadout = PC->CustomizationLoadout;
-	if (!Loadout.Character) {
+	/*if (!Loadout.Character) {
 		Loadout = Pawn->CustomizationLoadout;
-	}
-	if (Loadout.Character) {
-		//Pawn->CustomizationLoadout = Loadout;
-		//Pawn->OnRep_CustomizationLoadout();
+	}*/
+	if (IsValidLoadout(Loadout)) {
+		Pawn->CustomizationLoadout = Loadout;
+		Pawn->OnRep_CustomizationLoadout();
 		auto CID = Loadout.Character;
 		if (!CID) {
 			return ApplyDefaultCosmetics(Pawn);
@@ -397,7 +400,7 @@ namespace Hooks {
 		if (!Weapon) {
 			return;
 		}
-		auto Pawn = (AFortPlayerPawnAthena*)Weapon->GetOwner();
+		auto Pawn = (AFortPlayerPawnAthena*)Weapon->Owner;
 		if (!Pawn)
 		{
 			return;
@@ -519,7 +522,10 @@ namespace Core {
 			bRTSM = true;
 			LoadObject(UCustomCharacterPart::StaticClass(), L"/Game/Athena/Heroes/Meshes/Heads/F_Med_Head1_ATH.F_Med_Head1_ATH");
 			LoadObject(UCustomCharacterPart::StaticClass(), L"/Game/Characters/CharacterParts/Hats/Ramirez_Glasses.Ramirez_Glasses");
-			Inventory::SetupLoadout();
+			Inventory::SetupLoadout();	
+			BaseParts.push_back(UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart F_Med_Head1_ATH.F_Med_Head1_ATH"));
+			BaseParts.push_back(UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart CP_001_Athena_Body.CP_001_Athena_Body"));
+			BaseParts.push_back(UObject::FindObject<UCustomCharacterPart>("CustomCharacterPart Ramirez_Glasses.Ramirez_Glasses"));
 			StartServer();
 			AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(Obj);
 			AFortGameStateAthena* GS = reinterpret_cast<AFortGameStateAthena*>(GM->GameState);
@@ -574,19 +580,11 @@ namespace Core {
 			PlayerController->bHasInitializedWorldInventory = true;
 			Inventory::Update(PlayerController);
 
-			/*auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
-			HealthSet->CurrentShield.Minimum = 0;
-			HealthSet->CurrentShield.Maximum = 100;
-			HealthSet->CurrentShield.BaseValue = 0;
-			HealthSet->CurrentShield.CurrentValue = 0;
-			HealthSet->Shield.Minimum = 0;
-			HealthSet->Shield.Maximum = 100;
-			HealthSet->Shield.BaseValue = 100;
-			HealthSet->Shield.CurrentValue = 100;
-			HealthSet->OnRep_Shield();
-			HealthSet->OnRep_CurrentShield();*/
-
 			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
+#ifdef RESPAWNING
+			PlayerController->bBuildFree = true;
+			PlayerController->bInfiniteAmmo = true;
+#endif
 		}
 
 		//Battle Bus
@@ -935,6 +933,16 @@ namespace Core {
 		//Death and Winning Logic
 		if (FuncName == "ClientOnPawnDied") {
 			auto InParams = (Params::AFortPlayerControllerZone_ClientOnPawnDied_Params*)Params;
+#ifdef RESPAWNING
+			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
+			InParams->DeathReport.bNotifyUI = false;
+			APlayerPawn_Athena_C* Pawn = SpawnPawn({ 4024,200,3533 });
+			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->AllowRespawn();
+			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->RespawnPlayer();
+			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->RespawnPlayerServer();
+			Abilities::GiveBaseAbilities(Pawn);
+			ApplyCosmetics(PlayerController);
+#else
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			PlayerController->bMarkedAlive = false;
 			reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft--;
@@ -961,6 +969,7 @@ namespace Core {
 			}
 
 			//PlayerController->Pawn->K2_DestroyActor();
+#endif
 		}
 
 		if (FuncName == "ServerLoadingScreenDropped") {
@@ -976,6 +985,14 @@ namespace Core {
 				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)AI::AFortAIPlayer::Tick, AITest, 0, 0);
 				*/
 			}
+		}
+
+		if (FuncName == "ServerReturnToMainMenu") {
+			AFortPlayerController* PC = (AFortPlayerController*)(Obj);
+
+			PC->bIsDisconnecting = true;
+
+			PC->ClientTravel(L"Frontend", ETravelType::TRAVEL_Absolute, false, FGuid());
 		}
 
 		//Only allows equipped cosmetics
@@ -1074,9 +1091,18 @@ namespace Core {
 
 		if (FuncName == "ServerEndEditingBuildingActor") {
 			auto InParams = (Params::AFortPlayerController_ServerEndEditingBuildingActor_Params*)(Params);
+			AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)Obj;
 			if (InParams->BuildingActorToStopEditing) {
 				InParams->BuildingActorToStopEditing->EditingPlayer = nullptr;
 				InParams->BuildingActorToStopEditing->OnRep_EditingPlayer();
+
+				AFortWeap_EditingTool* EditToolData = (AFortWeap_EditingTool*)reinterpret_cast<APlayerPawn_Athena_C*>(PC->Pawn)->CurrentWeapon;
+
+				if (EditToolData && EditToolData->IsA(AFortWeap_EditingTool::StaticClass())) {
+					EditToolData->bEditConfirmed = true;
+					EditToolData->EditActor = nullptr;
+					EditToolData->OnRep_EditActor();
+				}
 			}
 		}
 
@@ -1088,11 +1114,13 @@ namespace Core {
 				auto EditTool = Inventory::GetItemInInv(PC, EditToolDef);
 				if (EditTool) {
 					auto EditToolData = (AFortWeap_EditingTool*)Inventory::EquipItem(PC, EditTool);
-					InParams->BuildingActorToEdit->EditingPlayer = (AFortPlayerStateZone*)PC->PlayerState;
-					InParams->BuildingActorToEdit->OnRep_EditingPlayer();
 					if (EditToolData) {
 						EditToolData->EditActor = InParams->BuildingActorToEdit;
+						EditToolData->OnRep_EditActor();
 					}
+					InParams->BuildingActorToEdit->EditingPlayer = (AFortPlayerStateZone*)PC->PlayerState;
+					InParams->BuildingActorToEdit->OnRep_EditingPlayer();
+					
 				}
 			}
 		}
@@ -1104,7 +1132,7 @@ namespace Core {
 		AllocConsole();
 		FILE* pFile;
 		freopen_s(&pFile, ("CONOUT$"), "w+", stdout);
-		SetConsoleTitleA("WaybackGS");
+		SetConsoleTitleA("WaybackGS - @GDBOI101");
 		MH_Initialize();
 		InitGObjects();
 		using namespace Replication;

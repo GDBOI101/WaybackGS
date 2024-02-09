@@ -8,6 +8,7 @@
 #include "Minhook/minhook.h"
 
 #define LATEGAME
+//#define RESPAWNING //NOT WORKING
 
 void CreateHook(uintptr_t Address, void* Hook, void** OG = nullptr) {
 	MH_CreateHook((void*)Address, Hook, OG);

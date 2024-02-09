@@ -36,7 +36,7 @@ namespace Replication {
 			return false;
 		}
 		static auto FnIsNetRelevantFor = reinterpret_cast<bool(__fastcall*)(AActor * InActor, AActor * RealViewer, AActor * ViewTarget, FVector & SrcLocation)>(InActor->Vft[Offsets::IsNetRelevantFor]);
-		FVector Loc = Client->ViewTarget->K2_GetActorLocation();
+		FVector Loc = Client->ViewTarget->ReplicatedMovement.Location;
 		return FnIsNetRelevantFor(InActor, Client->ViewTarget, Client->ViewTarget, Loc);
 	}
 
@@ -94,7 +94,20 @@ namespace Replication {
 				}
 				AActor* OwningActor = Connection->OwningActor;
 				if (OwningActor != nullptr && Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
-					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->GetViewTarget() : OwningActor);
+					if (Connection->PlayerController && reinterpret_cast<AFortPlayerController*>(Connection->PlayerController)->bIsDisconnecting) {
+						Connection->CurrentNetSpeed = 0;
+						continue;
+					}
+					AActor* VT = OwningActor;
+					if (Connection->PlayerController) {
+						if (Connection->PlayerController->PlayerCameraManager && Connection->PlayerController->PlayerCameraManager->ViewTarget.Target) {
+							VT = Connection->PlayerController->PlayerCameraManager->ViewTarget.Target;
+						}
+						else {
+							VT = Connection->PlayerController->GetViewTarget();
+						}
+					}
+					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->PlayerCameraManager->ViewTarget.Target : OwningActor);
 				}
 				else {
 					Connection->ViewTarget = nullptr;
