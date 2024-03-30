@@ -7,6 +7,7 @@
 #pragma comment(lib, "Minhook/minhook.lib")
 #include "Minhook/minhook.h"
 
+//#define BE
 #define LATEGAME
 //#define RESPAWNING //NOT WORKING
 

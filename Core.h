@@ -94,14 +94,15 @@ void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
 }
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
+#ifndef BE
+	return ApplyDefaultCosmetics(reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn));
+#endif
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
 	if (!Pawn) {
 		return;
 	}
 	auto Loadout = PC->CustomizationLoadout;
-	/*if (!Loadout.Character) {
-		Loadout = Pawn->CustomizationLoadout;
-	}*/
+
 	if (IsValidLoadout(Loadout)) {
 		Pawn->CustomizationLoadout = Loadout;
 		Pawn->OnRep_CustomizationLoadout();
@@ -609,15 +610,12 @@ namespace Core {
 			static UFortWeaponRangedItemDefinition* SG = Inventory::LootPool[13];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
 			static UFortWeaponRangedItemDefinition* SJ = Inventory::Consumables[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff");
 
-			Inventory::AddItem(PlayerController, Wood, 999, 0, EFortQuickBars::Secondary);
-			Inventory::AddItem(PlayerController, Stone, 999, 0, EFortQuickBars::Secondary);
-			Inventory::AddItem(PlayerController, Metal, 999, 0, EFortQuickBars::Secondary);
 			Inventory::AddItem(PlayerController, SG, 1, 1, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, AR, 1, 2, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, SJ, 1, 3, EFortQuickBars::Primary);
-			for (auto Item : Inventory::Ammo) {
-				Inventory::AddItem(PlayerController, Item, 999, 0, EFortQuickBars::Secondary);
-			}
+
+			PlayerController->bBuildFree = true;
+			PlayerController->bInfiniteAmmo = true;
 
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
@@ -933,17 +931,17 @@ namespace Core {
 		//Death and Winning Logic
 		if (FuncName == "ClientOnPawnDied") {
 			auto InParams = (Params::AFortPlayerControllerZone_ClientOnPawnDied_Params*)Params;
-#ifdef RESPAWNING
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
-			InParams->DeathReport.bNotifyUI = false;
-			APlayerPawn_Athena_C* Pawn = SpawnPawn({ 4024,200,3533 });
-			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->AllowRespawn();
-			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->RespawnPlayer();
-			reinterpret_cast<UFortCheatManager*>(PlayerController->CheatManager)->RespawnPlayerServer();
+#ifdef RESPAWNING
+			GEngine->GameViewport->World->AuthorityGameMode->RestartPlayer(PlayerController);
+			APlayerPawn_Athena_C* Pawn = SpawnPawn((FVector)(reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode))->SafeZoneIndicator->NextCenter);
+			PlayerController->Possess(Pawn);
+			reinterpret_cast<AFortPlayerStateAthena*>(PlayerController->PlayerState)->DeathInfo = {};
+			reinterpret_cast<AFortPlayerStateAthena*>(PlayerController->PlayerState)->OnRep_DeathInfo();
 			Abilities::GiveBaseAbilities(Pawn);
 			ApplyCosmetics(PlayerController);
+			PlayerController->bMarkedAlive = true;
 #else
-			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
 			PlayerController->bMarkedAlive = false;
 			reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft--;
 			auto Pickaxe = PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0];
@@ -967,8 +965,6 @@ namespace Core {
 					}
 				}
 			}
-
-			//PlayerController->Pawn->K2_DestroyActor();
 #endif
 		}
 
@@ -1164,12 +1160,13 @@ namespace Core {
 
 		//Reloading
 		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
-
+#ifdef BE
 		//Dedi Server
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
 
 		//Fix Profile Query
 		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
+#endif
 
 		//God Fix :)
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);

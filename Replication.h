@@ -36,7 +36,7 @@ namespace Replication {
 			return false;
 		}
 		static auto FnIsNetRelevantFor = reinterpret_cast<bool(__fastcall*)(AActor * InActor, AActor * RealViewer, AActor * ViewTarget, FVector & SrcLocation)>(InActor->Vft[Offsets::IsNetRelevantFor]);
-		FVector Loc = Client->ViewTarget->ReplicatedMovement.Location;
+		FVector Loc = Client->ViewTarget->K2_GetActorLocation();
 		return FnIsNetRelevantFor(InActor, Client->ViewTarget, Client->ViewTarget, Loc);
 	}
 
@@ -94,20 +94,7 @@ namespace Replication {
 				}
 				AActor* OwningActor = Connection->OwningActor;
 				if (OwningActor != nullptr && Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
-					if (Connection->PlayerController && reinterpret_cast<AFortPlayerController*>(Connection->PlayerController)->bIsDisconnecting) {
-						Connection->CurrentNetSpeed = 0;
-						continue;
-					}
-					AActor* VT = OwningActor;
-					if (Connection->PlayerController) {
-						if (Connection->PlayerController->PlayerCameraManager && Connection->PlayerController->PlayerCameraManager->ViewTarget.Target) {
-							VT = Connection->PlayerController->PlayerCameraManager->ViewTarget.Target;
-						}
-						else {
-							VT = Connection->PlayerController->GetViewTarget();
-						}
-					}
-					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->PlayerCameraManager->ViewTarget.Target : OwningActor);
+					Connection->ViewTarget = ((Connection->PlayerController) ? Connection->PlayerController->GetViewTarget() : OwningActor);
 				}
 				else {
 					Connection->ViewTarget = nullptr;
@@ -168,7 +155,6 @@ namespace Replication {
 					if (Connection->PlayerController && !IsBadReadPtr(Connection->PlayerController)) {
 						FnClientSendAdjustment(Connection->PlayerController);
 						int ReplicatedActorCount = ServerReplicateActors_ProcessActors(Connection, ConsiderList);
-						//LOG("Replicated " + std::to_string(ReplicatedActorCount) + " Actors for Connection: " + GetConnectionName(Connection));
 					}
 				}
 			}
