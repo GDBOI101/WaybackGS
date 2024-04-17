@@ -623,8 +623,8 @@ namespace Core {
 			Indicator->NextCenter = (FVector_NetQuantize100)SZLoc;
 			Indicator->LastCenter = (FVector_NetQuantize100)SZLoc;
 			Indicator->Radius = 10000;
-			Indicator->NextRadius = 10000;
-			Indicator->LastRadius = 10000;
+			Indicator->NextRadius = 80000;
+			Indicator->LastRadius = 50000;
 			if (GM->SafeZonePhase == 0 || GM->SafeZonePhase == 1) {
 				GM->SafeZonePhase = 2;
 			}
