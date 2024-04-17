@@ -471,31 +471,6 @@ namespace Core {
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
 	}
 
-	void SpawnFloorLoot() {
-		TArray<AActor*> FloorLootActors;
-		GGameplayStatics->GetAllActorsOfClass(GEngine->GameViewport->World, UObject::FindObjectFast<UClass>("Tiered_Athena_FloorLoot_01_C"), &FloorLootActors);
-		for (int i = 0; i < FloorLootActors.Num(); i++) {
-			auto Actor = FloorLootActors[i];
-
-			FVector Location = Actor->K2_GetActorLocation();
-
-			auto ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-			while (!ItemDef) {
-				ItemDef = Inventory::LootPool[rand() % (Inventory::LootPool.size())];
-			}
-			UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
-			Item->ItemEntry.Count = 1;
-			Inventory::SpawnPickup(Item, Location);
-
-			int ACount = (ItemDef->GetAmmoWorldItemDefinition_BP()->DropCount * 3);
-			UFortWorldItem* Ammo = (UFortWorldItem*)ItemDef->GetAmmoWorldItemDefinition_BP()->CreateTemporaryItemInstanceBP(ACount, 1);
-			Ammo->ItemEntry.Count = ACount;
-			Inventory::SpawnPickup(Ammo, Location);
-
-			Actor->K2_DestroyActor();
-		}
-	}
-
 	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
 	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
 		*((DWORD*)RequestContent + 0x18) = 3;
