@@ -723,33 +723,11 @@ namespace Core {
 		}
 
 		if (FuncName == "ServerReturnToMainMenu") {
-			AFortPlayerController* PC = (AFortPlayerController*)(Obj);
+			AFortPlayerController* PC = static_cast<AFortPlayerController*>(Obj);
 
-			PC->bIsDisconnecting = true;
-
-			PC->ClientTravel(L"Frontend", ETravelType::TRAVEL_Absolute, false, FGuid());
-		}
-
-		//Only allows equipped cosmetics
-		if (FuncName == "ServerChoosePart") {
-			auto InParams = (Params::AFortPlayerPawn_ServerChoosePart_Params*)(Params);
-			if (!InParams->ChosenCharacterPart) {
-				return;
-			}
-			else {
-				auto Pawn = reinterpret_cast<AFortPlayerPawnAthena*>(Obj);
-				if (!Pawn->PlayerState->bIsABot) {
-					bool Allowed = false;
-					for (auto Part : GetPlayerParts(reinterpret_cast<AFortPlayerControllerAthena*>(Pawn->Controller))) {
-						if (InParams->ChosenCharacterPart == Part) {
-							Allowed = true;
-							break;
-						}
-					}
-					if (!Allowed) {
-						return;
-					}
-				}
+			if (PC) {
+				PC->bIsDisconnecting = true;
+				PC->ClientTravel(TEXT("Frontend"), ETravelType::TRAVEL_Absolute, false, FGuid());
 			}
 		}
 
