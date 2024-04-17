@@ -346,6 +346,8 @@ namespace Core {
 			Inventory::AddItem(PlayerController, SG, 1, 1, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, AR, 1, 2, EFortQuickBars::Primary);
 			Inventory::AddItem(PlayerController, SJ, 1, 3, EFortQuickBars::Primary);
+			Inventory::AddItem(PlayerController, SG, 1, 4, EFortQuickBars::Primary);
+
 
 			PlayerController->bBuildFree = true;
 			PlayerController->bInfiniteAmmo = true;
