@@ -515,7 +515,7 @@ namespace Core {
 			GS->GamePhase = EAthenaGamePhase::Warmup;
 			GS->OnRep_GamePhase(OldGP);
 			GS->WarmupCountdownEndTime = 99990.0f;
-			SpawnFloorLoot();
+			//SpawnFloorLoot();
 		}
 
 		if (FuncName == "HandleStartingNewPlayer") {
