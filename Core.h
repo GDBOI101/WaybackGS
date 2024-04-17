@@ -94,9 +94,9 @@ void ApplyDefaultCosmetics(AFortPlayerPawnAthena* Pawn) {
 }
 
 void ApplyCosmetics(AFortPlayerControllerAthena* PC) {
-#ifndef BE
+
 	return ApplyDefaultCosmetics(reinterpret_cast<AFortPlayerPawnAthena*>(PC->Pawn));
-#endif
+
 	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
 	if (!Pawn) {
 		return;
@@ -157,242 +157,6 @@ UFortWeaponMeleeItemDefinition* GetPlayerPickaxe(AFortPlayerControllerAthena* PC
 		Pickaxe = Loadout.Pickaxe->WeaponDefinition;
 	}
 	return Pickaxe;
-}
-
-//Skunky Hardcoded AI (Not working) (Skidded Poalris Lmao)
-namespace AI {
-	enum class EWeaponType : uint8_t {
-		Pickaxe,
-		Light,
-		Medium,
-		Shotgun,
-		Heavy,
-		Rocket,
-		Other,
-		None
-	};
-
-	class AFortAIPlayer {
-	public:
-		//Config Vars
-		AAthena_PlayerController_C* MyPC;
-		UAthenaCharacterItemDefinition* Skin;
-		UFortWeaponMeleeItemDefinition* Pickaxe;
-		APawn* TargetPlayerPawn = nullptr;
-		//Temp Inventory Mapping
-		std::vector<UFortWeaponItemDefinition*> Items = {
-			{nullptr}, //Slot 0 Pickaxe
-			{nullptr}, //Slot 1 (SMG/Pistol)
-			{nullptr}, //Slot 2 (AR/Pistol)
-			{nullptr}, //Slot 3 (Shotgun)
-			{nullptr}, //Slot 4 (Explosive/Sniper)
-			{nullptr}  //Slot 5 (Heals) 
-		};
-		int LAmmo = 100; //Light
-		int MAmmo = 100; //Medium
-		int SAmmo = 100; //Shotgun
-		int HAmmo = 100; //Heavy
-		int RAmmo = 100; //Rocket
-		int HCount = 100; //Healing
-		bool bTick = false;
-
-		int CurrentSlot = 0;
-
-		AFortPlayerPawnAthena* GetAIPawn() {
-			AFortPlayerPawnAthena* MyPawn = (AFortPlayerPawnAthena*)MyPC->Pawn;
-			if (!MyPawn) {
-				bTick = false;
-				return nullptr;
-			}
-			return MyPawn;
-		}
-
-		EWeaponType GetWeaponType() {
-			auto CurrentItem = Items[CurrentSlot];
-			if (!CurrentItem) {
-				return EWeaponType::None;
-			}
-			else if (CurrentSlot == 0) {
-				return EWeaponType::Pickaxe;
-			}
-			else if (CurrentSlot == 5 || Inventory::IsConsumable(CurrentItem)) {
-				return EWeaponType::Other;
-			}
-			else {
-				auto AmmoType = CurrentItem->GetAmmoWorldItemDefinition_BP();
-				if (AmmoType == Inventory::Ammo[0]) {
-					return EWeaponType::Rocket;
-				}
-				else if (AmmoType == Inventory::Ammo[1]) {
-					return EWeaponType::Shotgun;
-				}
-				else if (AmmoType == Inventory::Ammo[2]) {
-					return EWeaponType::Medium;
-				}
-				else if (AmmoType == Inventory::Ammo[3]) {
-					return EWeaponType::Light;
-				}
-				else if (AmmoType == Inventory::Ammo[4]) {
-					return EWeaponType::Heavy;
-				}
-				else {
-					return EWeaponType::None;
-				}
-			}
-		}
-
-		void EquipItem(UFortWeaponItemDefinition* Weapon) {
-			auto MyPawn = GetAIPawn();
-			if (bTick) {
-				MyPawn->EquipWeaponDefinition(Weapon, {});
-			}
-		}
-
-		void Reload(EWeaponType Type) {
-			int y = sizeof(AFortAIPlayer);
-		}
-
-		bool HandlePreShot() {
-			if (bTick) {
-				EWeaponType Type = GetWeaponType();
-				bool bNeedsReload = false;
-				if (Type == EWeaponType::Pickaxe) {
-					return true;
-				}
-				if (Type == EWeaponType::Light) {
-					if (LAmmo > 0) {
-						LAmmo--;
-					}
-					else {
-						bNeedsReload = true;
-					}
-				}
-				else if (Type == EWeaponType::Medium) {
-					if (MAmmo > 0) {
-						MAmmo--;
-					}
-					else {
-						bNeedsReload = true;
-					}
-				}
-				else if (Type == EWeaponType::Shotgun) {
-					if (SAmmo > 0) {
-						SAmmo--;
-					}
-					else {
-						bNeedsReload = true;
-					}
-				}
-				else if (Type == EWeaponType::Heavy) {
-					if (HAmmo > 0) {
-						HAmmo--;
-					}
-					else {
-						bNeedsReload = true;
-					}
-				}
-				else if (Type == EWeaponType::Rocket) {
-					if (RAmmo > 0) {
-						RAmmo--;
-					}
-					else {
-						bNeedsReload = true;
-					}
-				}
-				else if (Type == EWeaponType::Other) {
-					if (HCount > 0) {
-						HCount--;
-					}
-					else {
-						return false;
-					}
-				}
-				if (!bNeedsReload) {
-					return true;
-				}
-				else {
-					Reload(Type);
-				}
-			}
-			return false;
-		}
-
-		void Shoot() {
-			auto MyPawn = GetAIPawn();
-			if (bTick && HandlePreShot()) {
-				MyPawn->PawnStartFire(0);
-				Sleep(2000);
-			}
-		}
-
-		static void Tick(AFortAIPlayer* Player) {
-			static auto MathLib = (UKismetMathLibrary*)UObject::FindObjectFast<UKismetMathLibrary>("Default__KismetMathLibrary");
-			while (true) {
-				Sleep(1000 / 30);
-				if (Player->bTick) {
-					auto MyPawn = Player->GetAIPawn();
-					if (Player->bTick && Player->TargetPlayerPawn) {
-						FVector loc = MathLib->Subtract_VectorVector(
-							Player->TargetPlayerPawn->K2_GetActorLocation(),
-							MyPawn->K2_GetActorLocation());
-						MyPawn->AddMovementInput(loc, 1, true);
-						FRotator rot = MathLib->Conv_VectorToRotator(loc);
-						Player->MyPC->ControlRotation = rot;
-						rot.Pitch = 0;
-						MyPawn->K2_SetActorRotation(rot, false);
-						MyPawn->CurrentMovementStyle = EFortMovementStyle::Sprinting;
-						Player->Shoot();
-					}
-				}
-				else {
-					return;
-				}
-			}
-		}
-
-		static AFortAIPlayer* CreateBot(FVector Pos, FString InPlayerName) {
-			static UFortHeroType* DefHeroType = UObject::FindObject<UFortHeroType>("FortHeroType HID_001_Athena_Commando_F.HID_001_Athena_Commando_F");
-			APlayerPawn_Generic_C* Pawn = SpawnActor<APlayerPawn_Generic_C>(Pos, nullptr);
-			if (Pawn) {
-				Pawn->bCanBeDamaged = false;
-				//Pawn is valid continue spawning
-				AAthena_PlayerController_C* PC = SpawnActor<AAthena_PlayerController_C>(Pos, nullptr);
-				PC->Player = (UPlayer*)GGameplayStatics->SpawnObject(UPlayer::StaticClass(), PC);
-				PC->Player->PlayerController = PC;
-				PC->Possess(Pawn);
-				Pawn->PawnUniqueID = (rand() % 100);
-				Pawn->OnRep_PawnUniqueID();
-				AFortPlayerStateAthena* PS = SpawnActor<AFortPlayerStateAthena>(Pos, PC);
-				Pawn->PlayerState = PS;
-				Pawn->OnRep_PlayerState();
-				PC->PlayerState = PS;
-				PC->OnRep_PlayerState();
-				PC->ServerChangeName(InPlayerName);
-				PS->HeroType = DefHeroType;
-				PS->OnRep_HeroType();
-				Pawn->SetMaxHealth(100.0f);
-				Pawn->SetHealth(100.0f);
-				Pawn->CurrentMovementStyle = SDK::EFortMovementStyle::Sprinting;
-				PS->bIsSpectator = false;
-				PS->bIsABot = true;
-				PS->bHasFinishedLoading = true;
-				PS->bHasStartedPlaying = true;
-				PS->OnRep_bHasStartedPlaying();
-				ApplyDefaultCosmetics((AFortPlayerPawnAthena*)Pawn);
-				PS->OnRep_CharacterParts();
-				AFortAIPlayer* Ret = {};
-				Ret->MyPC = PC;
-				Ret->Items[2] = Inventory::LootPool[0];
-				Ret->CurrentSlot = 2;
-				Ret->bTick = true;
-				return Ret;
-			}
-			else {
-				MessageBoxA(0, "Bot no work", "Ratio", MB_OK);
-				return nullptr;
-			}
-		}
-	};
 }
 
 namespace Hooks {
@@ -469,12 +233,6 @@ namespace Core {
 		GEngine->GameViewport->World->LevelCollections[1].NetDriver = NetDriver;
 		uintptr_t TickFlushAddr = (Base + Offsets::TickFlush);
 		CreateHook(TickFlushAddr, Hooks::TickFlush_Hk, (void**)&Hooks::TickFlushO);
-	}
-
-	void* (*DispatchRequestOG)(void* McpProfileGroup, void* RequestContent);
-	void* DispatchRequest_Hk(void* McpProfileGroup, void* RequestContent) {
-		*((DWORD*)RequestContent + 0x18) = 3;
-		return DispatchRequestOG(McpProfileGroup, RequestContent);
 	}
 
 	void (*ApplyHomebaseEffectsOnPlayerSetupOG)(AFortGameState* GameState, __int64 a2, __int64 a3, APlayerController* PlayerController, UFortHero* Hero, char a6, unsigned __int8 a7);
@@ -557,10 +315,10 @@ namespace Core {
 			Inventory::Update(PlayerController);
 
 			PlayerController->CheatManager = (UCheatManager*)GGameplayStatics->SpawnObject(UFortCheatManager::StaticClass(), PlayerController);
-#ifdef RESPAWNING
+
 			PlayerController->bBuildFree = true;
 			PlayerController->bInfiniteAmmo = true;
-#endif
+
 		}
 
 		//Battle Bus
@@ -571,7 +329,7 @@ namespace Core {
 			auto HealthSet = reinterpret_cast<AFortPlayerPawnAthena*>(PlayerController->Pawn)->HealthSet;
 			Pawn->SetMaxHealth(100);
 			Pawn->SetHealth(100);
-#ifndef LATEGAME
+
 			HealthSet->CurrentShield.Minimum = 0;
 			HealthSet->CurrentShield.Maximum = 100;
 			HealthSet->CurrentShield.BaseValue = 0;
@@ -580,7 +338,7 @@ namespace Core {
 			HealthSet->Shield.Maximum = 100;
 			HealthSet->Shield.BaseValue = 100;
 			HealthSet->Shield.CurrentValue = 100;
-#else
+
 			static UFortWeaponRangedItemDefinition* AR = Inventory::LootPool[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03");
 			static UFortWeaponRangedItemDefinition* SG = Inventory::LootPool[13];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
 			static UFortWeaponRangedItemDefinition* SJ = Inventory::Consumables[1];//UObject::FindObject<UFortWeaponRangedItemDefinition>("FortWeaponRangedItemDefinition Athena_PurpleStuff.Athena_PurpleStuff");
@@ -600,7 +358,7 @@ namespace Core {
 			HealthSet->Shield.Maximum = 100;
 			HealthSet->Shield.BaseValue = 100;
 			HealthSet->Shield.CurrentValue = 100;
-#endif
+
 			HealthSet->OnRep_Shield();
 			HealthSet->OnRep_CurrentShield();
 			ApplyCosmetics(PlayerController);
@@ -855,7 +613,7 @@ namespace Core {
 		}
 
 		//Late Game
-#ifdef LATEGAME
+// Declarar una variable de tiempo para hacer un seguimiento del tiempo transcurrido
 		float ElapsedTime = 0.0f;
 
 		if (FuncName == "OnSafeZoneStateChange") {
@@ -883,6 +641,7 @@ namespace Core {
 			}
 		}
 
+
 		if (FuncName == "OnAircraftEnteredDropZone") {
 			static bool Set = false;
 			if (!Set) {
@@ -906,7 +665,7 @@ namespace Core {
 				GS->SafeZonesStartTime = 1;
 			}
 		}
-#endif
+
 
 		//Misc
 		if (FuncName == "ServerCheat" || FuncName == "ServerCheatAll" || FuncName == "CheatAll" || FuncName == "ServerPlayEmoteItem") {
@@ -917,7 +676,7 @@ namespace Core {
 		if (FuncName == "ClientOnPawnDied") {
 			auto InParams = (Params::AFortPlayerControllerZone_ClientOnPawnDied_Params*)Params;
 			AFortPlayerControllerAthena* PlayerController = (AFortPlayerControllerAthena*)Obj;
-#ifdef RESPAWNING
+
 			GEngine->GameViewport->World->AuthorityGameMode->RestartPlayer(PlayerController);
 			APlayerPawn_Athena_C* Pawn = SpawnPawn((FVector)(reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode))->SafeZoneIndicator->NextCenter);
 			PlayerController->Possess(Pawn);
@@ -926,7 +685,7 @@ namespace Core {
 			Abilities::GiveBaseAbilities(Pawn);
 			ApplyCosmetics(PlayerController);
 			PlayerController->bMarkedAlive = true;
-#else
+
 			PlayerController->bMarkedAlive = false;
 			reinterpret_cast<AFortGameStateAthena*>(GEngine->GameViewport->World->GameState)->PlayersLeft--;
 			auto Pickaxe = PlayerController->QuickBars->PrimaryQuickBar.Slots[0].Items[0];
@@ -950,7 +709,7 @@ namespace Core {
 					}
 				}
 			}
-#endif
+
 		}
 
 		if (FuncName == "ServerLoadingScreenDropped") {
@@ -960,11 +719,6 @@ namespace Core {
 				ApplyCosmetics(PlayerController);
 				Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
 				PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
-				/*
-				auto AITest = AI::AFortAIPlayer::CreateBot(PlayerController->Pawn->K2_GetActorLocation() + FVector{ 500,0,0 }, L"TestPlayer1");
-				AITest->TargetPlayerPawn = PlayerController->Pawn;
-				CreateThread(0, 0, (LPTHREAD_START_ROUTINE)AI::AFortAIPlayer::Tick, AITest, 0, 0);
-				*/
 			}
 		}
 
@@ -1034,6 +788,8 @@ namespace Core {
 				}
 			}
 		}
+
+		//editing main code
 
 		if (FuncName == "ServerEditBuildingActor") {
 			AFortPlayerController* PC = (AFortPlayerController*)(Obj);
