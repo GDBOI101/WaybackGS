@@ -881,6 +881,8 @@ namespace Core {
 
 		//Late Game
 #ifdef LATEGAME
+		float ElapsedTime = 0.0f;
+
 		if (FuncName == "OnSafeZoneStateChange") {
 			AFortGameModeAthena* GM = reinterpret_cast<AFortGameModeAthena*>(GEngine->GameViewport->World->AuthorityGameMode);
 			auto InParams = (Params::AFortSafeZoneIndicator_OnSafeZoneStateChange_Params*)Params;
@@ -894,7 +896,15 @@ namespace Core {
 				GM->SafeZonePhase = 2;
 			}
 			else {
-				Indicator->SafeZoneFinishShrinkTime = 99999;
+				// Incrementar el tiempo transcurrido en cada llamada a la función
+				//ElapsedTime += DeltaTime;
+
+				// Si han pasado 140 segundos, cerrar el círculo de la tormenta
+				if (ElapsedTime >= 140.0f) {
+					Indicator->SafeZoneFinishShrinkTime = 99999;
+					// Reiniciar el tiempo transcurrido para contar los siguientes 140 segundos
+					ElapsedTime = 0.0f;
+				}
 			}
 		}
 
@@ -1160,13 +1170,13 @@ namespace Core {
 
 		//Reloading
 		CreateHook(Base + Offsets::HandleReloadCost, Hooks::HandleReloadCost_Hk, (void**)&Hooks::HandleReloadCost);
-#ifdef BE
+
 		//Dedi Server
 		CreateHook(Base + Offsets::GetNetMode, Patch, nullptr);
 
 		//Fix Profile Query
-		CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
-#endif
+		//CreateHook(Base + Offsets::DispatchRequest, DispatchRequest_Hk, (void**)&DispatchRequestOG);
+
 
 		//God Fix :)
 		GEngine->GameInstance->LocalPlayers.RemoveAt(0);
