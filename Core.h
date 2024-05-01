@@ -971,7 +971,9 @@ namespace Core {
 		if (FuncName == "ServerLoadingScreenDropped") {
 			auto PlayerController = (AFortPlayerControllerAthena*)Obj;
 			if (!PlayerController->PlayerState->bIsABot) {
+#ifdef BE
 				reinterpret_cast<bool(*)(AFortPlayerControllerAthena*)>(Base + 0x424E40)(PlayerController); //GetOrInitializeHero (Applys the loadout)
+#endif
 				ApplyCosmetics(PlayerController);
 				Inventory::AddItem(PlayerController, GetPlayerPickaxe(PlayerController), 1, 0);
 				PlayerController->QuickBars->ServerActivateSlotInternal(EFortQuickBars::Primary, 0, 0, true);
